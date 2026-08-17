@@ -341,6 +341,101 @@ async def mode_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
 
 
+async def add_company_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /add_company command to dynamically track new ATS boards."""
+    if not update.effective_chat or not update.message:
+        return
+
+    args = context.args or []
+    if len(args) < 2:
+        await update.message.reply_text(
+            "🏢 *Add Custom Company ATS Board*\n\n"
+            "*Usage:*\n"
+            "`/add_company <greenhouse|lever|ashby> <board_token> [Company Name]`\n\n"
+            "*Examples:*\n"
+            "• `/add_company greenhouse anthropic Anthropic`\n"
+            "• `/add_company ashby perplexity Perplexity`\n"
+            "• `/add_company lever palantir Palantir`\n"
+            "• `/add_company greenhouse figma Figma`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    provider = args[0].lower().strip()
+    token = args[1].strip()
+    display_name = " ".join(args[2:]).strip() if len(args) > 2 else token.capitalize()
+
+    if provider not in ("greenhouse", "lever", "ashby"):
+        await update.message.reply_text(
+            "⚠️ Invalid provider. Supported ATS platforms: `greenhouse`, `lever`, `ashby`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    await update.message.reply_text(
+        f"🔍 Verifying and polling *{display_name}* on `{provider}`...",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    from ingestion.ats_watcher import MultiATSPoller
+    from ingestion.runner import upsert_postings
+
+    try:
+        poller = MultiATSPoller(display_name, provider, token)
+        postings = poller.poll()
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO watched_companies (company_name, ats_provider, board_token, is_active)
+                    VALUES (%s, %s, %s, TRUE)
+                    ON CONFLICT (ats_provider, board_token) 
+                    DO UPDATE SET company_name = EXCLUDED.company_name, is_active = TRUE;
+                    """,
+                    (display_name, provider, token),
+                )
+            conn.commit()
+
+            inserted, updated, unmod = upsert_postings(conn, postings)
+
+        await update.message.reply_text(
+            f"✅ *Successfully added {display_name}!* 🎯\n\n"
+            f"• *ATS Provider:* `{provider}`\n"
+            f"• *Board Token:* `{token}`\n"
+            f"• *Postings Ingested:* `{len(postings)}` active roles ({inserted} new)\n\n"
+            f"Now monitoring `{display_name}` every 15 minutes! Use `/watch {display_name}` to get instant alerts.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+    except Exception as e:
+        await update.message.reply_text(
+            f"❌ Failed to ingest from `{provider}:{token}`: {str(e)}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+async def companies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /companies command to list all custom monitored ATS boards."""
+    if not update.effective_chat or not update.message:
+        return
+
+    from ingestion.ats_watcher import load_all_watched_companies
+
+    with get_db_connection() as conn:
+        watched = load_all_watched_companies(conn)
+
+    if not watched:
+        await update.message.reply_text("No custom ATS company boards configured yet. Use `/add_company` to add one!")
+        return
+
+    lines = ["🏢 *Monitored Custom Company ATS Boards:*\n"]
+    for w in sorted(watched, key=lambda x: x["company_name"]):
+        lines.append(f"• *{w['company_name']}* (`{w['ats_provider']}:{w['board_token']}`)")
+
+    lines.append("\n_Add more anytime with:_ `/add_company <greenhouse|lever|ashby> <token>`")
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
+
+
 def start_bot() -> None:
     """Start the Telegram bot daemon in polling mode."""
     if not TELEGRAM_BOT_TOKEN:
@@ -358,6 +453,9 @@ def start_bot() -> None:
     app.add_handler(CommandHandler("list", list_command))
     app.add_handler(CommandHandler("unwatch", unwatch_command))
     app.add_handler(CommandHandler("mode", mode_command))
+    app.add_handler(CommandHandler("add_company", add_company_command))
+    app.add_handler(CommandHandler("add_board", add_company_command))
+    app.add_handler(CommandHandler("companies", companies_command))
 
     console.print("[bold green]✓ Telegram Bot is running and listening for commands.[/]")
     app.run_polling()

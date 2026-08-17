@@ -1,0 +1,12 @@
+[
+  { "company_name": "Anthropic", "ats_provider": "greenhouse", "board_token": "anthropic" },
+  { "company_name": "Figma", "ats_provider": "greenhouse", "board_token": "figma" },
+  { "company_name": "Scale AI", "ats_provider": "greenhouse", "board_token": "scaleai" },
+  { "company_name": "Stripe", "ats_provider": "greenhouse", "board_token": "stripe" },
+  { "company_name": "Datadog", "ats_provider": "greenhouse", "board_token": "datadog" },
+  { "company_name": "Cloudflare", "ats_provider": "greenhouse", "board_token": "cloudflare" },
+  { "company_name": "Perplexity", "ats_provider": "ashby", "board_token": "perplexity" },
+  { "company_name": "Modal", "ats_provider": "ashby", "board_token": "modal" },
+  { "company_name": "Palantir", "ats_provider": "lever", "board_token": "palantir" },
+  { "company_name": "Spotify", "ats_provider": "lever", "board_token": "spotify" }
+]

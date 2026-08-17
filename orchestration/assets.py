@@ -26,21 +26,21 @@ def raw_simplify_postings(context: AssetExecutionContext) -> list[NormalizedPost
 
 @asset(
     group_name="ingestion",
-    description="Fetches and normalizes postings from company Greenhouse ATS JSON APIs (Cloudflare, Datadog, Stripe).",
+    description="Fetches and normalizes postings from all custom watched company boards (Greenhouse, Lever, Ashby).",
 )
-def raw_greenhouse_postings(context: AssetExecutionContext) -> list[NormalizedPosting]:
-    """Ingest Greenhouse ATS public boards."""
-    companies = [
-        ("cloudflare", "Cloudflare"),
-        ("datadog", "Datadog"),
-        ("stripe", "Stripe"),
-    ]
+def raw_custom_ats_postings(context: AssetExecutionContext) -> list[NormalizedPosting]:
+    """Ingest custom company ATS public boards (Greenhouse, Lever, Ashby)."""
+    from ingestion.ats_watcher import MultiATSPoller, load_all_watched_companies
+
+    with get_db_connection() as conn:
+        watched = load_all_watched_companies(conn)
+
     all_postings: list[NormalizedPosting] = []
-    for token, display in companies:
-        poller = GreenhousePoller(company_token=token, display_name=display)
+    for co in watched:
+        poller = MultiATSPoller(co["company_name"], co["ats_provider"], co["board_token"])
         postings, _ = poller.run()
         all_postings.extend(postings)
-        context.log.info(f"Greenhouse {display}: fetched {len(postings)} postings.")
+        context.log.info(f"ATS {co['company_name']} ({co['ats_provider']}:{co['board_token']}): fetched {len(postings)} postings.")
     return all_postings
 
 
@@ -51,10 +51,10 @@ def raw_greenhouse_postings(context: AssetExecutionContext) -> list[NormalizedPo
 def upserted_postings_db(
     context: AssetExecutionContext,
     raw_simplify_postings: list[NormalizedPosting],
-    raw_greenhouse_postings: list[NormalizedPosting],
+    raw_custom_ats_postings: list[NormalizedPosting],
 ) -> MaterializeResult:
     """Upsert postings into PostgreSQL and return newly detected rows."""
-    all_postings = raw_simplify_postings + raw_greenhouse_postings
+    all_postings = raw_simplify_postings + raw_custom_ats_postings
     
     with get_db_connection() as conn:
         new_records, new_count, updated_count = upsert_postings(conn, all_postings)
