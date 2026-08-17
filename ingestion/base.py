@@ -44,6 +44,10 @@ class SourcePoller(ABC):
                     delay *= 2
                     continue
 
+                # Return directly on 304 (Not Modified) or 2xx
+                if response.status_code == 304:
+                    return response
+
                 response.raise_for_status()
                 return response
             except (httpx.RequestError, httpx.HTTPStatusError) as exc:
