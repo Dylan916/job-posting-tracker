@@ -24,7 +24,7 @@ def get_pool() -> ConnectionPool:
             min_size=1,
             max_size=10,
             open=True,
-            kwargs={"row_factory": dict_row},
+            kwargs={"row_factory": dict_row, "autocommit": True},
         )
     return _pool
 

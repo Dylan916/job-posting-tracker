@@ -1,7 +1,9 @@
-"""Skill extraction engine using curated taxonomy regex patterns."""
+"""Skill extraction engine with full ATS job description enrichment."""
 
-import json
+import html
+import re
 from typing import Any
+import httpx
 import psycopg
 from rich.console import Console
 from rich.progress import track
@@ -10,6 +12,15 @@ from db.connection import get_db_connection
 from processing.taxonomy import SKILL_TAXONOMY
 
 console = Console()
+CLEAN_HTML_REGEX = re.compile(r"<[^>]+>")
+
+
+def clean_html(raw_html: str) -> str:
+    """Strip HTML tags and unescape HTML entities."""
+    if not raw_html:
+        return ""
+    text = CLEAN_HTML_REGEX.sub(" ", raw_html)
+    return html.unescape(text)
 
 
 def extract_skills_from_text(text: str) -> list[tuple[str, str]]:
@@ -17,23 +28,23 @@ def extract_skills_from_text(text: str) -> list[tuple[str, str]]:
     if not text:
         return []
 
+    cleaned = clean_html(text)
     matched: list[tuple[str, str]] = []
     for skill_def in SKILL_TAXONOMY:
-        if skill_def.pattern.search(text):
+        if skill_def.pattern.search(cleaned):
             matched.append((skill_def.name, skill_def.category))
 
     return matched
 
 
 def extract_skills_from_posting(posting: dict[str, Any]) -> list[tuple[str, str]]:
-    """Extract skills from a posting record (title + location + raw_json fields)."""
+    """Extract skills from title, description, and metadata fields."""
     title = str(posting.get("title") or "")
     raw_json = posting.get("raw_json") or {}
     
-    # Compile all relevant textual fields
     text_corpus = [title]
     if isinstance(raw_json, dict):
-        for key in ("category", "description", "requirements", "notes", "sponsorship", "degrees"):
+        for key in ("content", "description", "requirements", "notes", "category", "degrees"):
             val = raw_json.get(key)
             if isinstance(val, list):
                 text_corpus.extend(str(item) for item in val)
@@ -64,22 +75,65 @@ def save_skill_mentions(
     return inserted
 
 
-def backfill_all_skills(batch_size: int = 1000) -> int:
-    """Extract and persist skills for all postings currently in PostgreSQL."""
-    console.print("[bold cyan]Starting skill extraction across all job postings...[/]")
+def enrich_and_extract_greenhouse_descriptions(batch_size: int = 150) -> int:
+    """Fetch full job descriptions from Greenhouse ATS API and extract detailed tech skills."""
+    console.print("[bold cyan]Fetching full job descriptions from Greenhouse ATS APIs...[/]")
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, title, raw_json FROM postings ORDER BY id ASC;")
+            cur.execute("""
+                SELECT id, source, external_id, company, title 
+                FROM postings 
+                WHERE source LIKE 'greenhouse_%%' AND is_active = TRUE
+                ORDER BY id ASC
+                LIMIT %s;
+            """, (batch_size,))
+            greenhouse_postings = cur.fetchall()
+
+    if not greenhouse_postings:
+        console.print("[dim]No Greenhouse postings found for description enrichment.[/]")
+        return 0
+
+    client = httpx.Client(timeout=10.0, follow_redirects=True)
+    total_skills = 0
+
+    with get_db_connection() as conn:
+        for p in track(greenhouse_postings, description="Enriching full job descriptions..."):
+            company_token = p["source"].replace("greenhouse_", "")
+            job_id = p["external_id"]
+            url = f"https://boards-api.greenhouse.io/v1/boards/{company_token}/jobs/{job_id}"
+
+            try:
+                resp = client.get(url)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    content = data.get("content", "")
+                    skills = extract_skills_from_text(f"{p['title']} {content}")
+                    if skills:
+                        total_skills += save_skill_mentions(conn, p["id"], skills)
+            except Exception:
+                continue
+
+        conn.commit()
+
+    console.print(f"[bold green]✓ Enriched {len(greenhouse_postings)} full job descriptions and added {total_skills} skill mentions.[/]")
+    return total_skills
+
+
+def backfill_all_skills() -> int:
+    """Extract skills from titles and metadata, plus enrich full ATS descriptions."""
+    console.print("[bold cyan]Starting comprehensive skill extraction...[/]")
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, title, raw_json FROM postings WHERE is_active = TRUE ORDER BY id ASC;")
             postings = cur.fetchall()
 
-        total_postings = len(postings)
         total_mentions = 0
-
-        console.print(f"Analyzing {total_postings} postings for tech skill mentions...")
+        console.print(f"Analyzing {len(postings)} active postings for tech skills...")
 
         with conn.cursor() as cur:
-            for p in track(postings, description="Extracting skills..."):
+            for p in track(postings, description="Scanning postings..."):
                 skills = extract_skills_from_posting(p)
                 if skills:
                     query = """
@@ -93,7 +147,11 @@ def backfill_all_skills(batch_size: int = 1000) -> int:
 
             conn.commit()
 
-    console.print(f"[bold green]✓ Successfully extracted and recorded {total_mentions} skill mentions.[/]")
+    # Also enrich full descriptions for Greenhouse ATS postings
+    enrich_mentions = enrich_and_extract_greenhouse_descriptions(batch_size=200)
+    total_mentions += enrich_mentions
+
+    console.print(f"[bold green]✓ Comprehensive skill extraction complete: {total_mentions} total skill mentions recorded.[/]")
     return total_mentions
 
 

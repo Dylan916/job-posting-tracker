@@ -2,7 +2,7 @@
 
 from typing import Any
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import psycopg
 
 from api.dependencies import get_db
@@ -14,7 +14,8 @@ class SkillCount(BaseModel):
     skill: str
     category: str
     count: int
-    percentage_of_postings: float
+    percentage_of_postings: float = Field(description="Percentage of total postings (e.g. 0.84 means 0.84%, less than 1%)")
+    percentage_of_skills: float = Field(description="Share of this skill among all extracted skill mentions (e.g. 43.9%)")
 
 
 class CategorySummary(BaseModel):
@@ -30,7 +31,7 @@ def get_top_skills(
     limit: int = Query(15, ge=1, le=100, description="Max skills to return"),
     conn: psycopg.Connection = Depends(get_db),
 ) -> list[SkillCount]:
-    """Retrieve top in-demand tech skills, optionally filtered by season or category."""
+    """Retrieve top in-demand tech skills with percentage of postings and share of total skills."""
     conditions: list[str] = []
     params: list[Any] = []
 
@@ -58,7 +59,7 @@ def get_top_skills(
     """
 
     with conn.cursor() as cur:
-        # Get total postings count for the term
+        # Get total postings count
         if term:
             cur.execute("SELECT COUNT(*) AS total FROM postings WHERE terms ILIKE %s OR title ILIKE %s;", (f"%{term.strip()}%", f"%{term.strip()}%"))
         else:
@@ -68,18 +69,33 @@ def get_top_skills(
         if total_postings == 0:
             total_postings = 1
 
+        # Get total skill mentions count in this filter
+        total_skills_query = f"""
+            SELECT COUNT(s.id) AS total_skills
+            FROM skill_mentions s
+            JOIN postings p ON s.posting_id = p.id
+            {where_clause};
+        """
+        cur.execute(total_skills_query, params)
+        total_skills_row = cur.fetchone()
+        total_skills = total_skills_row["total_skills"] if total_skills_row else 1
+        if total_skills == 0:
+            total_skills = 1
+
         cur.execute(skills_query, params + [limit])
         rows = cur.fetchall()
 
     results: list[SkillCount] = []
     for r in rows:
-        pct = round((r["count"] / total_postings) * 100, 2)
+        pct_postings = round((r["count"] / total_postings) * 100, 2)
+        pct_skills = round((r["count"] / total_skills) * 100, 2)
         results.append(
             SkillCount(
                 skill=r["skill"],
                 category=r["category"] or "General",
                 count=r["count"],
-                percentage_of_postings=pct,
+                percentage_of_postings=pct_postings,
+                percentage_of_skills=pct_skills,
             )
         )
 
