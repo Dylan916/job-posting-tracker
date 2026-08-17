@@ -45,7 +45,7 @@ echo -e "${YELLOW}4/4 Starting Telegram Bot Listener Daemon...${NC}"
 uv run python -m notifications.bot &
 BOT_PID=$!
 
-sleep 2
+sleep 3
 
 echo -e "\n${BOLD}${GREEN}======================================================${NC}"
 echo -e "${BOLD}${GREEN}🚀 InternIndex is Live and Running!${NC}"
@@ -53,8 +53,9 @@ echo -e "${BOLD}${GREEN}======================================================${
 echo -e "• ${BOLD}⚡ Web Dashboard:${NC}       ${CYAN}http://localhost:8000${NC}"
 echo -e "• ${BOLD}📡 API Docs (Swagger):${NC}   ${CYAN}http://localhost:8000/docs${NC}"
 echo -e "• ${BOLD}📊 Dagster Pipeline DAG:${NC} ${CYAN}http://localhost:3000${NC}"
-echo -e "• ${BOLD}🤖 Telegram Alert Bot:${NC}   ${CYAN}@dylan_job_tracker_bot${NC}"
+echo -e "• ${BOLD}🤖 Telegram Alert Bot:${NC}   ${CYAN}https://t.me/dylan_job_tracker_bot${NC}"
 echo -e "${BOLD}${GREEN}======================================================${NC}"
+echo -e "${YELLOW}👉 Hold [Cmd / Ctrl] and click any link above to open in your browser!${NC}"
 echo -e "${YELLOW}Press [Ctrl + C] anytime to stop all services cleanly.${NC}\n"
 
 # Keep the script running to stream logs and wait for signal
