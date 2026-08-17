@@ -1,4 +1,4 @@
-"""Dagster Software-Defined Assets (SDAs) for the job posting pipeline."""
+"""Dagster Software-Defined Assets (SDAs) for the job posting and analytics pipeline."""
 
 from typing import Any
 from dagster import AssetExecutionContext, MaterializeResult, MetadataValue, asset
@@ -9,6 +9,7 @@ from ingestion.models import NormalizedPosting
 from ingestion.runner import upsert_postings
 from ingestion.simplify import SimplifyPoller
 from notifications.dispatcher import dispatch_notifications
+from processing.extractor import extract_skills_from_posting, save_skill_mentions
 
 
 @asset(
@@ -95,5 +96,36 @@ def telegram_alerts_dispatched(
         metadata={
             "new_postings_evaluated": MetadataValue.int(len(new_postings)),
             "notifications_dispatched": MetadataValue.int(sent_count),
+        },
+    )
+
+
+@asset(
+    group_name="analytics",
+    description="Extracts in-demand tech skills from newly ingested postings and saves to skill_mentions table.",
+)
+def extracted_skills_asset(
+    context: AssetExecutionContext,
+    upserted_postings_db: list[dict[str, Any]],
+) -> MaterializeResult:
+    """Extract and persist skills for new postings."""
+    new_postings = upserted_postings_db or []
+    total_mentions = 0
+
+    if new_postings:
+        with get_db_connection() as conn:
+            for p in new_postings:
+                skills = extract_skills_from_posting(p)
+                if skills:
+                    total_mentions += save_skill_mentions(conn, p["id"], skills)
+            conn.commit()
+        context.log.info(f"Extracted {total_mentions} skill mentions from {len(new_postings)} new postings.")
+    else:
+        context.log.info("No new postings detected; skill mentions up to date.")
+
+    return MaterializeResult(
+        value=total_mentions,
+        metadata={
+            "new_skill_mentions_extracted": MetadataValue.int(total_mentions),
         },
     )

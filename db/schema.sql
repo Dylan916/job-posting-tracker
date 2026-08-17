@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS postings (
     company TEXT NOT NULL,
     title TEXT NOT NULL,
     location TEXT,                         -- handles multi-location lists
-    terms TEXT,                            -- e.g. 'Summer 2027', 'Fall 2026, Spring 2027'
+    terms TEXT,                            -- e.g. 'Summer 2027', 'Fall 2026'
     is_remote BOOLEAN DEFAULT FALSE,
     url TEXT,
     posted_at TIMESTAMP WITH TIME ZONE,
@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS skill_mentions (
     id SERIAL PRIMARY KEY,
     posting_id INTEGER NOT NULL REFERENCES postings(id) ON DELETE CASCADE,
     skill VARCHAR(100) NOT NULL,
+    category VARCHAR(50),
     extracted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(posting_id, skill)
 );
+
+CREATE INDEX IF NOT EXISTS idx_skill_mentions_skill ON skill_mentions(skill);
+CREATE INDEX IF NOT EXISTS idx_skill_mentions_category ON skill_mentions(category);

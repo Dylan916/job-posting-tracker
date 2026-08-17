@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse
 
 from api.routes.health import router as health_router
 from api.routes.postings import router as postings_router
+from api.routes.skills import router as skills_router
 from api.routes.stats import router as stats_router
 from db.connection import close_pool, get_pool
 
@@ -43,6 +44,7 @@ app.add_middleware(
 # Register API v1 routes
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(postings_router, prefix="/api/v1")
+app.include_router(skills_router, prefix="/api/v1")
 app.include_router(stats_router, prefix="/api/v1")
 
 
