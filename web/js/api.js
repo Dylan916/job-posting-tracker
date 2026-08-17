@@ -17,6 +17,9 @@ export const apiClient = {
         if (params.is_remote !== undefined && params.is_remote !== null) {
             query.set('is_remote', params.is_remote);
         }
+        if (params.is_us_only !== undefined && params.is_us_only !== null) {
+            query.set('is_us_only', params.is_us_only);
+        }
         if (params.page) query.set('page', params.page);
         if (params.page_size) query.set('page_size', params.page_size);
         if (params.sort_by) query.set('sort_by', params.sort_by);

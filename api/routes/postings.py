@@ -15,10 +15,11 @@ router = APIRouter(prefix="/postings", tags=["Postings"])
 def list_postings(
     company: str | None = Query(None, description="Filter by company name (case-insensitive)"),
     term: str | None = Query(None, description="Filter by recruiting season / term (e.g. 'Summer 2027', 'Fall 2026')"),
-    keyword: str | None = Query(None, description="Search keyword across title, company, or description"),
-    location: str | None = Query(None, description="Filter by location (e.g. 'San Francisco', 'Remote')"),
-    is_remote: bool | None = Query(None, description="Filter by remote eligibility"),
-    is_active: bool | None = Query(True, description="Filter by active status"),
+    keyword: str | None = Query(None, description="Search keyword in title, company, or search_vector"),
+    location: str | None = Query(None, description="Filter by location string"),
+    is_remote: bool | None = Query(None, description="Filter remote positions"),
+    is_us_only: bool | None = Query(None, description="Filter exclusively for US-based positions"),
+    is_active: bool | None = Query(True, description="Filter active/open positions (default true)"),
     source: str | None = Query(None, description="Filter by data source (e.g. 'simplify_github', 'greenhouse_cloudflare')"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -50,6 +51,13 @@ def list_postings(
     if is_remote is not None:
         conditions.append("is_remote = %s")
         params.append(is_remote)
+
+    if is_us_only is True:
+        # Match US state codes, major tech hubs, country designations, or domestic remote
+        us_regex = r"\y(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC|USA|United States|NYC|SF|San Francisco|New York|Seattle|Austin|Chicago|Boston|Los Angeles|Remote in USA|US Remote)\y"
+        non_us_regex = r"\y(UK|Canada|London|Toronto|Vancouver|Waterloo|Montreal|Singapore|India|Australia|Sydney|Berlin|Germany|France|Paris|Dublin|Ireland|Zurich|Switzerland|Tokyo|Japan|Seoul|Korea)\y"
+        conditions.append(f"(location ~* %s AND (location !~* %s OR location ~* '\\y(USA|United States|CA|NY|TX|WA|IL)\\y'))")
+        params.extend([us_regex, non_us_regex])
 
     if is_active is not None:
         conditions.append("is_active = %s")
