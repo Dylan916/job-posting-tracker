@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "dagster>=1.13.18",
+    "dagster-webserver>=1.13.18",
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "psycopg[binary,pool]>=3.3.4",
