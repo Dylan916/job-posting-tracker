@@ -61,181 +61,93 @@
             </div>
         </section>
 
-        <!-- Main Workspace (Job Explorer & Minimal Skills Panel) -->
-        <div class="workspace-layout">
-            <!-- Left: Job Explorer -->
-            <div class="explorer-col">
-                <!-- Plain Underline Term Filter Tabs -->
-                <div class="term-tabs-row">
-                    <div class="term-tabs" id="term-tabs">
-                        <button class="term-tab active" data-term="Summer 2027" id="tab-summer-2027">
-                            Summer 2027 <span class="tab-count" id="badge-2027">(415)</span>
-                        </button>
-                        <button class="term-tab" data-term="Summer 2026" id="tab-summer-2026">
-                            Summer 2026
-                        </button>
-                        <button class="term-tab" data-term="Fall 2026" id="tab-fall-2026">
-                            Fall 2026
-                        </button>
-                        <button class="term-tab" data-term="Winter 2027" id="tab-winter-2027">
-                            Winter / Spring 2027
-                        </button>
-                        <button class="term-tab" data-term="" id="tab-all-active">
-                            All Active
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Hairline Search & Filter Controls -->
-                <div class="filter-controls-row">
-                    <div class="search-input-box">
-                        <input type="text" id="search-input" placeholder="Search role, keyword, or technology..." autocomplete="off">
-                        <button class="clear-btn" id="clear-search" style="display: none;">clear</button>
-                    </div>
-
-                    <div class="filter-selects">
-                        <select id="company-select" class="hairline-select">
-                            <option value="">All Companies</option>
-                        </select>
-
-                        <button class="toggle-btn" id="remote-toggle" data-active="false">
-                            Remote Only
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Active Filter Tags -->
-                <div class="active-tags-row" id="active-tags-row" style="display: none;">
-                    <span class="active-label">Active filters:</span>
-                    <div class="tags-container" id="tags-container"></div>
-                    <button class="reset-link" id="reset-filters-btn">Reset</button>
-                </div>
-
-                <!-- Registry Count & Sort Bar -->
-                <div class="list-meta-bar">
-                    <div class="results-count">
-                        <span class="count-bold" id="current-count-display">0</span> positions
-                        <span id="term-context-label" class="term-context">for Summer 2027</span>
-                    </div>
-                    <div class="sort-control">
-                        <label for="sort-select">Sort:</label>
-                        <select id="sort-select" class="hairline-select-sm">
-                            <option value="posted_at:desc">Newest First</option>
-                            <option value="company:asc">Company (A-Z)</option>
-                            <option value="title:asc">Role Title (A-Z)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Single-Column Job Listings -->
-                <div class="job-list-panel">
-                    <div class="job-list-container" id="postings-grid">
-                        <div class="loading-panel" id="loading-spinner">
-                            <span class="mono-text">Loading verified postings...</span>
-                        </div>
-                    </div>
-
-                    <!-- Pagination Panel -->
-                    <div class="pagination-bar" id="pagination-bar">
-                        <button class="page-nav-btn" id="prev-page-btn" disabled>Previous</button>
-                        <span class="page-indicator" id="page-indicator">Page 1 of 1</span>
-                        <button class="page-nav-btn" id="next-page-btn" disabled>Next</button>
-                    </div>
+        <!-- Full-Width Job Explorer -->
+        <section class="explorer-section">
+            <!-- Plain Underline Term Filter Tabs -->
+            <div class="term-tabs-row">
+                <div class="term-tabs" id="term-tabs">
+                    <button class="term-tab active" data-term="Summer 2027" id="tab-summer-2027">
+                        Summer 2027 <span class="tab-count" id="badge-2027">(415)</span>
+                    </button>
+                    <button class="term-tab" data-term="Summer 2026" id="tab-summer-2026">
+                        Summer 2026
+                    </button>
+                    <button class="term-tab" data-term="Fall 2026" id="tab-fall-2026">
+                        Fall 2026
+                    </button>
+                    <button class="term-tab" data-term="Winter 2027" id="tab-winter-2027">
+                        Winter / Spring 2027
+                    </button>
+                    <button class="term-tab" data-term="" id="tab-all-active">
+                        All Active
+                    </button>
                 </div>
             </div>
 
-            <!-- Right: Minimal Skills & Telegram Summary -->
-            <aside class="sidebar-col">
-                <!-- Flat Skills Demand Panel -->
-                <div class="sidebar-panel">
-                    <div class="panel-header">
-                        <h3 class="panel-title">Top Skills</h3>
-                        <span class="panel-meta">Enriched</span>
-                    </div>
-                    <p class="panel-sub">Verified mentions from job requirements.</p>
+            <!-- Hairline Search & Filter Controls -->
+            <div class="filter-controls-row">
+                <div class="search-input-box">
+                    <input type="text" id="search-input" placeholder="Search role, company, or keyword..." autocomplete="off">
+                    <button class="clear-btn" id="clear-search" style="display: none;">clear</button>
+                </div>
 
-                    <!-- Flat Skills Chart List -->
-                    <div class="skills-flat-list" id="skills-chart-list">
-                        <div class="skills-flat-row">
-                            <div class="skill-label-row">
-                                <span class="skill-name">Python</span>
-                                <span class="skill-meta">44 roles (37.6%)</span>
-                            </div>
-                            <div class="skill-track">
-                                <div class="skill-fill" style="width: 37.6%;"></div>
-                            </div>
-                        </div>
-                        <div class="skills-flat-row">
-                            <div class="skill-label-row">
-                                <span class="skill-name">Java</span>
-                                <span class="skill-meta">13 roles (11.1%)</span>
-                            </div>
-                            <div class="skill-track">
-                                <div class="skill-fill" style="width: 11.1%;"></div>
-                            </div>
-                        </div>
-                        <div class="skills-flat-row">
-                            <div class="skill-label-row">
-                                <span class="skill-name">LLMs / AI</span>
-                                <span class="skill-meta">13 roles (11.1%)</span>
-                            </div>
-                            <div class="skill-track">
-                                <div class="skill-fill" style="width: 11.1%;"></div>
-                            </div>
-                        </div>
-                        <div class="skills-flat-row">
-                            <div class="skill-label-row">
-                                <span class="skill-name">Go / Golang</span>
-                                <span class="skill-meta">6 roles (5.1%)</span>
-                            </div>
-                            <div class="skill-track">
-                                <div class="skill-fill" style="width: 5.1%;"></div>
-                            </div>
-                        </div>
-                        <div class="skills-flat-row">
-                            <div class="skill-label-row">
-                                <span class="skill-name">PyTorch</span>
-                                <span class="skill-meta">5 roles (4.3%)</span>
-                            </div>
-                            <div class="skill-track">
-                                <div class="skill-fill" style="width: 4.3%;"></div>
-                            </div>
-                        </div>
-                        <div class="skills-flat-row">
-                            <div class="skill-label-row">
-                                <span class="skill-name">Linux</span>
-                                <span class="skill-meta">5 roles (4.3%)</span>
-                            </div>
-                            <div class="skill-track">
-                                <div class="skill-fill" style="width: 4.3%;"></div>
-                            </div>
-                        </div>
+                <div class="filter-selects">
+                    <select id="company-select" class="hairline-select">
+                        <option value="">All Companies</option>
+                    </select>
+
+                    <button class="toggle-btn" id="remote-toggle" data-active="false">
+                        Remote Only
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Filter Tags -->
+            <div class="active-tags-row" id="active-tags-row" style="display: none;">
+                <span class="active-label">Active filters:</span>
+                <div class="tags-container" id="tags-container"></div>
+                <button class="reset-link" id="reset-filters-btn">Reset</button>
+            </div>
+
+            <!-- Registry Count & Sort Bar -->
+            <div class="list-meta-bar">
+                <div class="results-count">
+                    <span class="count-bold" id="current-count-display">0</span> positions
+                    <span id="term-context-label" class="term-context">for Summer 2027</span>
+                </div>
+                <div class="sort-control">
+                    <label for="sort-select">Sort:</label>
+                    <select id="sort-select" class="hairline-select-sm">
+                        <option value="posted_at:desc">Newest First</option>
+                        <option value="company:asc">Company (A-Z)</option>
+                        <option value="title:asc">Role Title (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Single-Column Job Listings -->
+            <div class="job-list-panel">
+                <div class="job-list-container" id="postings-grid">
+                    <div class="loading-panel" id="loading-spinner">
+                        <span class="mono-text">Loading verified postings...</span>
                     </div>
                 </div>
 
-                <!-- Instant Alerts Box -->
-                <div class="sidebar-panel">
-                    <div class="panel-header">
-                        <h3 class="panel-title">Telegram Alerts</h3>
-                    </div>
-                    <p class="panel-sub">Receive instant notifications when new Summer 2027 positions open.</p>
-                    <div class="bot-command-box">
-                        <code>/watch term Summer 2027</code>
-                        <code>/find Summer 2027 10</code>
-                    </div>
-                    <a href="https://t.me/dylan_job_tracker_bot" target="_blank" class="btn-sidebar-cta">
-                        Connect @dylan_job_tracker_bot ↗
-                    </a>
+                <!-- Pagination Panel -->
+                <div class="pagination-bar" id="pagination-bar">
+                    <button class="page-nav-btn" id="prev-page-btn" disabled>Previous</button>
+                    <span class="page-indicator" id="page-indicator">Page 1 of 1</span>
+                    <button class="page-nav-btn" id="next-page-btn" disabled>Next</button>
                 </div>
-            </aside>
-        </div>
+            </div>
+        </section>
     </main>
 
     <!-- Footer -->
     <footer class="site-footer">
         <div class="footer-inner">
             <div class="footer-copy">
-                Roles — Self-Hosted Technical Internship Tracker
+                Roles — Self-Hosted Technical Internship Registry
             </div>
             <div class="footer-links">
                 <a href="/docs" target="_blank">FastAPI Docs</a>
