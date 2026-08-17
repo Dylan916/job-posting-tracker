@@ -19,12 +19,17 @@ echo -e "${BOLD}${CYAN}⚡ Starting InternIndex Platform...${NC}\n"
 echo -e "${YELLOW}1/4 Checking PostgreSQL container...${NC}"
 docker compose up -d
 
-# 2. Trap SIGINT (Ctrl+C) and SIGTERM for instantaneous single-keypress shutdown
+# 2. Trap SIGINT (Ctrl+C) and SIGTERM for instantaneous shutdown
 cleanup() {
-    trap - SIGINT SIGTERM # Disarm traps to avoid double trigger
+    trap - SIGINT SIGTERM EXIT
     echo -e "\n${YELLOW}Shutting down InternIndex services...${NC}"
-    kill -TERM "$FASTAPI_PID" "$DAGSTER_PID" "$BOT_PID" 2>/dev/null || true
-    wait "$FASTAPI_PID" "$DAGSTER_PID" "$BOT_PID" 2>/dev/null || true
+    # Kill all spawned processes and child workers immediately
+    if [ -n "$FASTAPI_PID" ]; then kill -9 "$FASTAPI_PID" 2>/dev/null || true; fi
+    if [ -n "$DAGSTER_PID" ]; then kill -9 "$DAGSTER_PID" 2>/dev/null || true; fi
+    if [ -n "$BOT_PID" ]; then kill -9 "$BOT_PID" 2>/dev/null || true; fi
+    pkill -9 -f "notifications.bot" 2>/dev/null || true
+    pkill -9 -f "orchestration/definitions.py" 2>/dev/null || true
+    pkill -9 -f "uvicorn api.main:app" 2>/dev/null || true
     echo -e "${GREEN}✓ All services stopped cleanly.${NC}"
     exit 0
 }
@@ -58,5 +63,5 @@ echo -e "${BOLD}${GREEN}======================================================${
 echo -e "${YELLOW}👉 Hold [Cmd / Ctrl] and click any link above to open in your browser!${NC}"
 echo -e "${YELLOW}Press [Ctrl + C] once anytime to stop all services cleanly.${NC}\n"
 
-# Keep the script running to stream logs and wait for signal
+# Wait for all background jobs
 wait
