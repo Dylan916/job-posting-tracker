@@ -60,10 +60,19 @@ def list_postings(
         conditions.append(f"(location ~* %s AND (location !~* %s OR location ~* '\\y(USA|United States|CA|NY|TX|WA|IL)\\y'))")
         params.extend([us_regex, non_us_regex])
 
-    if is_undergrad_only is True:
-        # Exclude PhD, Masters, MBA, and Advanced Degree roles
-        grad_regex = r"\y(PhD|Ph\.D\.|Doctoral|Doctorate|Masters|Master'?s|MBA|Advanced Degree|Postdoc|Post-Doc)\y"
-        conditions.append("title !~* %s")
+    if is_undergrad_only is True or str(is_undergrad_only).lower() in ("true", "1"):
+        # Exclude PhD, Masters, MBA, Postdoc from title AND from Simplify's structured 'degrees' JSON array
+        grad_regex = r"(\y(PhD|Doctoral|Doctorate|Masters|MS|MBA|Postdoc|Post-Doc)\y|Ph\.D|Master'?s|Advanced Degree|(?<!under)graduate)"
+        conditions.append("""
+            (
+                title !~* %s
+                AND NOT (
+                    raw_json->'degrees' IS NOT NULL 
+                    AND (raw_json->'degrees' ? 'PhD' OR raw_json->'degrees' ? 'Master''s' OR raw_json->'degrees' ? 'MBA')
+                    AND NOT (raw_json->'degrees' ? 'Bachelor''s')
+                )
+            )
+        """)
         params.append(grad_regex)
 
     if is_active is not None:

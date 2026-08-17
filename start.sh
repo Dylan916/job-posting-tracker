@@ -53,7 +53,7 @@ uv run python -m ingestion.runner >/dev/null 2>&1 || true
 
 # 3. Start FastAPI Backend & Web Dashboard (Port 8000)
 echo -e "${YELLOW}3/5 Starting FastAPI Backend & Web Dashboard on :8000...${NC}"
-uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 &
+uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload &
 FASTAPI_PID=$!
 
 # 4. Start Dagster Orchestration Dev Webserver (Port 3000)
