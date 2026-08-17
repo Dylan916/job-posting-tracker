@@ -218,11 +218,11 @@ async function loadPostings() {
             sort_order: state.sort_order,
         });
 
-        state.totalPages = data.total_pages;
-        state.totalItems = data.total_items;
+        state.totalPages = data.total_pages || 1;
+        state.totalItems = data.total || 0;
 
         // Update Count Display
-        elements.currentCountDisplay.textContent = data.total_items.toLocaleString();
+        elements.currentCountDisplay.textContent = (data.total || 0).toLocaleString();
 
         // Update Pagination
         elements.pageIndicator.textContent = `Page ${data.page} of ${data.total_pages || 1}`;
