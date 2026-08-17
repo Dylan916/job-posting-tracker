@@ -22,7 +22,7 @@ def list_postings(
     source: str | None = Query(None, description="Filter by data source (e.g. 'simplify_github', 'greenhouse_cloudflare')"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    sort_by: str = Query("first_seen_at", description="Field to sort by (first_seen_at, posted_at, company, title)"),
+    sort_by: str = Query("posted_at", description="Field to sort by (posted_at, first_seen_at, company, title)"),
     sort_order: str = Query("desc", description="Sort direction (asc, desc)"),
     conn: psycopg.Connection = Depends(get_db),
 ) -> PaginatedPostings:
@@ -62,8 +62,8 @@ def list_postings(
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     # Validate sorting fields
-    allowed_sorts = {"first_seen_at", "posted_at", "company", "title", "id"}
-    safe_sort_by = sort_by if sort_by in allowed_sorts else "first_seen_at"
+    allowed_sorts = {"posted_at", "first_seen_at", "company", "title", "id"}
+    safe_sort_by = sort_by if sort_by in allowed_sorts else "posted_at"
     safe_sort_order = "ASC" if sort_order.lower() == "asc" else "DESC"
 
     offset = (page - 1) * page_size
@@ -75,7 +75,7 @@ def list_postings(
             is_remote, url, posted_at, first_seen_at, last_seen_at, is_active
         FROM postings
         {where_clause}
-        ORDER BY {safe_sort_by} {safe_sort_order} NULLS LAST
+        ORDER BY {safe_sort_by} {safe_sort_order} NULLS LAST, id DESC
         LIMIT %s OFFSET %s;
     """
 

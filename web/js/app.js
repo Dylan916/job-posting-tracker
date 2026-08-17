@@ -13,7 +13,7 @@ const state = {
     is_remote: null,
     page: 1,
     page_size: 15,
-    sort_by: 'first_seen_at',
+    sort_by: 'posted_at',
     sort_order: 'desc',
     skill_category: '',
     totalPages: 1,
