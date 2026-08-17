@@ -84,7 +84,7 @@ class SimplifyPoller(SourcePoller):
 
         # Extract terms (e.g. ['Summer 2027', 'Fall 2026'])
         raw_terms = raw.get("terms") or []
-        terms = [str(t).strip() for t in raw_terms if str(t).strip() and str(t).strip().upper() != "N/A"]
+        raw_terms_clean = [str(t).strip() for t in raw_terms if str(t).strip() and str(t).strip().upper() != "N/A"]
 
         # Parse posted timestamp
         posted_at: datetime | None = None
@@ -94,6 +94,16 @@ class SimplifyPoller(SourcePoller):
                 posted_at = datetime.fromtimestamp(float(ts), tz=timezone.utc)
             except (ValueError, OSError, OverflowError):
                 posted_at = None
+
+        # Smart Summer Normalization: Active summer roles posted in July 2026+ are Summer 2027 (preserve Fall/Spring)
+        terms: list[str] = []
+        is_recent_post = posted_at is None or posted_at >= datetime(2026, 7, 1, tzinfo=timezone.utc)
+        for t in raw_terms_clean:
+            if t == "Summer 2026" and is_recent_post and not any("fall" in x.lower() or "spring" in x.lower() for x in raw_terms_clean):
+                terms.append("Summer 2027")
+            else:
+                terms.append(t)
+        terms = list(dict.fromkeys(terms))
 
         url = raw.get("url") or raw.get("company_url")
 

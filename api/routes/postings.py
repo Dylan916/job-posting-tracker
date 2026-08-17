@@ -40,10 +40,20 @@ def list_postings(
         conditions.append("(terms ILIKE %s OR title ILIKE %s)")
         params.extend([f"%{term.strip()}%", f"%{term.strip()}%"])
 
-    if keyword:
-        # Use full-text search vector for high performance keyword matching
-        conditions.append("(search_vector @@ plainto_tsquery('english', %s) OR title ILIKE %s)")
-        params.extend([keyword.strip(), f"%{keyword.strip()}%"])
+    if keyword and keyword.strip():
+        kw = keyword.strip()
+        kw_like = f"%{kw}%"
+        # Search seamlessly across title, company, location, terms, and full-text vector
+        conditions.append("""
+            (
+                title ILIKE %s 
+                OR company ILIKE %s 
+                OR location ILIKE %s 
+                OR terms ILIKE %s
+                OR (plainto_tsquery('english', %s) != ''::tsquery AND search_vector @@ plainto_tsquery('english', %s))
+            )
+        """)
+        params.extend([kw_like, kw_like, kw_like, kw_like, kw, kw])
 
     if location:
         conditions.append("location ILIKE %s")
