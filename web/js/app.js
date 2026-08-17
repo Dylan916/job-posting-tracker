@@ -1,5 +1,5 @@
 /**
- * InternPulse — Main Application Controller
+ * Roles — Application Controller
  */
 
 import { apiClient } from './api.js';
@@ -11,7 +11,7 @@ const state = {
     keyword: '',
     is_remote: null,
     page: 1,
-    page_size: 15,
+    page_size: 20,
     sort_by: 'posted_at',
     sort_order: 'desc',
     totalPages: 1,
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Setup UI Event Listeners
  */
 function setupEventListeners() {
-    // 1. Term Switcher Tabs
+    // 1. Plain Underline Term Filter Tabs
     elements.termTabs.addEventListener('click', (e) => {
         const tab = e.target.closest('.term-tab');
         if (!tab) return;
@@ -78,7 +78,7 @@ function setupEventListeners() {
             state.page = 1;
             renderActiveFilterTags();
             loadPostings();
-        }, 300);
+        }, 250);
     });
 
     elements.clearSearchBtn.addEventListener('click', () => {
@@ -122,7 +122,7 @@ function setupEventListeners() {
         if (state.page > 1) {
             state.page--;
             loadPostings();
-            window.scrollTo({ top: 400, behavior: 'smooth' });
+            window.scrollTo({ top: 200, behavior: 'smooth' });
         }
     });
 
@@ -130,7 +130,7 @@ function setupEventListeners() {
         if (state.page < state.totalPages) {
             state.page++;
             loadPostings();
-            window.scrollTo({ top: 400, behavior: 'smooth' });
+            window.scrollTo({ top: 200, behavior: 'smooth' });
         }
     });
 
@@ -141,31 +141,27 @@ function setupEventListeners() {
 }
 
 /**
- * Load Initial Aggregate Stats & Fill Company Dropdown
+ * Load Initial Stats & Fill Company Dropdown
  */
 async function loadInitialStats() {
     try {
         const stats = await apiClient.getStats();
 
-        // Update hero metrics
         if (elements.valActiveCount) {
             elements.valActiveCount.textContent = stats.active_postings.toLocaleString();
         }
 
-        // Check 2027 count in terms breakdown
         const term2027 = stats.postings_by_term.find(t => t.term.includes('2027'));
         if (term2027) {
             if (elements.val2027Count) elements.val2027Count.textContent = `${term2027.count}`;
-            if (elements.badge2027) elements.badge2027.textContent = term2027.count;
+            if (elements.badge2027) elements.badge2027.textContent = `(${term2027.count})`;
         }
 
-        // Tracked companies
         const companyCount = stats.top_companies ? stats.top_companies.length : 0;
         if (elements.valCompaniesCount) {
             elements.valCompaniesCount.textContent = `${stats.total_postings > 1000 ? '500+' : companyCount}`;
         }
 
-        // Populate company select dropdown
         if (stats.top_companies && stats.top_companies.length > 0) {
             const options = stats.top_companies.map(c => `
                 <option value="${escapeHtml(c.company)}">${escapeHtml(c.company)} (${c.count})</option>
@@ -178,13 +174,12 @@ async function loadInitialStats() {
 }
 
 /**
- * Load & Render Postings Grid
+ * Load & Render Single-Column Job Listings
  */
 async function loadPostings() {
     elements.postingsGrid.innerHTML = `
-        <div class="loading-spinner-container">
-            <div class="spinner"></div>
-            <p>Fetching verified live postings...</p>
+        <div class="loading-panel">
+            <span class="mono-text">Loading verified postings...</span>
         </div>
     `;
 
@@ -216,12 +211,11 @@ async function loadPostings() {
             return;
         }
 
-        renderPostingsList(data.items);
+        renderJobListings(data.items);
     } catch (err) {
         elements.postingsGrid.innerHTML = `
-            <div class="empty-state-container">
-                <div class="empty-icon">⚠️</div>
-                <h3>Unable to load job postings</h3>
+            <div class="empty-panel">
+                <div class="empty-title">Unable to load job postings</div>
                 <p>${escapeHtml(err.message)}</p>
             </div>
         `;
@@ -229,40 +223,34 @@ async function loadPostings() {
 }
 
 /**
- * Render List of Job Cards
+ * Render List of Job Rows (Single-Column)
  */
-function renderPostingsList(items) {
+function renderJobListings(items) {
     const html = items.map(p => {
-        const companyInitial = p.company ? p.company.charAt(0).toUpperCase() : '💼';
-        const isSummer2027 = p.terms && p.terms.includes('2027');
-        const termBadgeClass = isSummer2027 ? 'term-badge-2027' : 'term-badge-other';
         const ageText = formatRelativeTime(p.posted_at || p.first_seen_at);
+        const locationStr = p.is_remote ? (p.location ? `${p.location} (Remote)` : 'Remote') : (p.location || 'Location not specified');
 
         return `
-            <article class="job-card" id="job-card-${p.id}">
+            <div class="job-row" id="job-row-${p.id}">
                 <div class="job-main">
-                    <div class="job-company-row">
-                        <div class="company-avatar">${companyInitial}</div>
-                        <span class="company-name">${escapeHtml(p.company)}</span>
-                        <span class="source-pill">${escapeHtml(p.source)}</span>
+                    <div class="job-company">
+                        <span>${escapeHtml(p.company)}</span>
+                        <span class="job-source-tag">${escapeHtml(p.source)}</span>
                     </div>
-
-                    <h3 class="job-title">${escapeHtml(p.title)}</h3>
-
-                    <div class="job-meta-row">
-                        ${p.terms ? `<span class="${termBadgeClass}">🗓️ ${escapeHtml(p.terms)}</span>` : ''}
-                        ${p.location ? `<span class="meta-pill">📍 ${escapeHtml(p.location)}</span>` : ''}
-                        ${p.is_remote ? `<span class="remote-pill">🏠 Remote</span>` : ''}
-                        <span class="age-indicator">🕒 ${ageText}</span>
-                    </div>
+                    <div class="job-title">${escapeHtml(p.title)}</div>
                 </div>
 
-                <div class="job-action">
-                    <a href="${escapeHtml(p.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-apply" id="apply-btn-${p.id}">
-                        Apply Now <span>↗</span>
+                <div class="job-meta-right">
+                    <div class="job-meta-text">
+                        <span class="job-term-str">${escapeHtml(p.terms || 'General')}</span>
+                        <span>${escapeHtml(locationStr)} · ${ageText}</span>
+                    </div>
+
+                    <a href="${escapeHtml(p.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-apply-cta" id="apply-btn-${p.id}">
+                        Apply ↗
                     </a>
                 </div>
-            </article>
+            </div>
         `;
     }).join('');
 
@@ -274,11 +262,10 @@ function renderPostingsList(items) {
  */
 function renderEmptyState() {
     elements.postingsGrid.innerHTML = `
-        <div class="empty-state-container">
-            <div class="empty-icon">🔍</div>
-            <h3>No postings found matching your filters</h3>
+        <div class="empty-panel">
+            <div class="empty-title">No postings found matching current filters</div>
             <p>Try resetting filters or searching with different keywords.</p>
-            <button class="btn btn-apply" style="margin-top: 1rem;" onclick="window.resetAllFilters()">Reset Filters</button>
+            <button class="btn-apply-cta" style="margin-top: 1rem;" onclick="window.resetAllFilters()">Reset Filters</button>
         </div>
     `;
 }
