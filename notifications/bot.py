@@ -342,43 +342,57 @@ async def mode_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def add_company_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /add_company command to dynamically track new ATS boards."""
+    """Handle /add_company command with auto-detection across Greenhouse, Ashby, and Lever."""
     if not update.effective_chat or not update.message:
         return
 
     args = context.args or []
-    if len(args) < 2:
+    if not args:
         await update.message.reply_text(
-            "🏢 *Add Custom Company ATS Board*\n\n"
+            "🏢 *Add Custom Company Board*\n\n"
             "*Usage:*\n"
-            "`/add_company <greenhouse|lever|ashby> <board_token> [Company Name]`\n\n"
+            "• Smart Auto-Detect: `/add_company <company_name>`\n"
+            "• Explicit: `/add_company <greenhouse|lever|ashby> <token> [Display Name]`\n\n"
             "*Examples:*\n"
+            "• `/add_company ramp`\n"
+            "• `/add_company linear Linear`\n"
             "• `/add_company greenhouse anthropic Anthropic`\n"
-            "• `/add_company ashby perplexity Perplexity`\n"
-            "• `/add_company lever palantir Palantir`\n"
-            "• `/add_company greenhouse figma Figma`",
+            "• `/add_company ashby perplexity Perplexity`",
             parse_mode=ParseMode.MARKDOWN,
         )
         return
-
-    provider = args[0].lower().strip()
-    token = args[1].strip()
-    display_name = " ".join(args[2:]).strip() if len(args) > 2 else token.capitalize()
-
-    if provider not in ("greenhouse", "lever", "ashby"):
-        await update.message.reply_text(
-            "⚠️ Invalid provider. Supported ATS platforms: `greenhouse`, `lever`, `ashby`",
-            parse_mode=ParseMode.MARKDOWN,
-        )
-        return
-
-    await update.message.reply_text(
-        f"🔍 Verifying and polling *{display_name}* on `{provider}`...",
-        parse_mode=ParseMode.MARKDOWN,
-    )
 
     from ingestion.ats_watcher import MultiATSPoller
     from ingestion.runner import upsert_postings
+    from scripts.check_company import detect_ats
+
+    # Check if first arg is an explicit provider
+    if args[0].lower() in ("greenhouse", "lever", "ashby") and len(args) >= 2:
+        provider = args[0].lower().strip()
+        token = args[1].strip()
+        display_name = " ".join(args[2:]).strip() if len(args) > 2 else token.capitalize()
+    else:
+        # Auto-detect mode!
+        query = args[0].strip()
+        display_name = " ".join(args[1:]).strip() if len(args) > 1 else query.capitalize()
+        
+        await update.message.reply_text(
+            f"🔍 Auto-scanning Greenhouse, Ashby, and Lever for *{query}*...",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        provider, token, count = detect_ats(query)
+        if not provider:
+            await update.message.reply_text(
+                f"❌ Could not find a public ATS board for *{query}* across Greenhouse, Ashby, or Lever.\n"
+                f"They may use a private portal (e.g. Workday/Oracle) or a different token name.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+    await update.message.reply_text(
+        f"⚡ Found *{display_name}* on `{provider}` (board: `{token}`). Ingesting postings...",
+        parse_mode=ParseMode.MARKDOWN,
+    )
 
     try:
         poller = MultiATSPoller(display_name, provider, token)
@@ -401,10 +415,10 @@ async def add_company_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         await update.message.reply_text(
             f"✅ *Successfully added {display_name}!* 🎯\n\n"
-            f"• *ATS Provider:* `{provider}`\n"
+            f"• *Detected ATS:* `{provider.capitalize()}`\n"
             f"• *Board Token:* `{token}`\n"
-            f"• *Postings Ingested:* `{len(postings)}` active roles ({inserted} new)\n\n"
-            f"Now monitoring `{display_name}` every 15 minutes! Use `/watch {display_name}` to get instant alerts.",
+            f"• *Active Roles Ingested:* `{len(postings)}` ({inserted} new)\n\n"
+            f"Now monitoring `{display_name}` every 15 minutes! Use `/watch {display_name}` to receive instant notifications.",
             parse_mode=ParseMode.MARKDOWN,
         )
     except Exception as e:
