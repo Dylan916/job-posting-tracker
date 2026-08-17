@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 echo -e "${BOLD}${CYAN}⚡ Starting InternIndex Platform...${NC}\n"
 
 # 1. Start PostgreSQL via Docker (auto-launch Docker Desktop if closed)
-echo -e "${YELLOW}1/4 Checking PostgreSQL container...${NC}"
+echo -e "${YELLOW}1/5 Checking PostgreSQL container...${NC}"
 if ! docker info >/dev/null 2>&1; then
     echo -e "${CYAN}Docker is not running. Launching Docker Desktop...${NC}"
     if [[ "$OSTYPE" == "darwin"* ]]; then
