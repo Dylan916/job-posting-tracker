@@ -6,6 +6,12 @@ An event-driven data engineering pipeline, multi-ATS watcher, and real-time aler
 
 ---
 
+## 🖥️ Minimalist Web Dashboard
+
+![InternIndex Web Dashboard](docs/assets/dashboard.png)
+
+---
+
 ## 🏗️ Architecture Overview
 
 ```mermaid
@@ -57,16 +63,18 @@ flowchart TD
 4. **Minimalist Web Dashboard ("Roles" Design System):**
    * High-contrast, editorial interface served at `http://localhost:8000/`.
    * **Palette:** `#FAFAF8` (soft off-white), `#1A1A18` (text), `#6B6A63` (muted), `#2B4C3F` (deep pine green), `#E3E1D9` (hairline borders).
-   * **Layout:** Plain stacked numerals (Summer 2027: 415, Active: 3,000, Companies: 500+), text tabs with active underline, single-column job list with bold company, regular role title, right-aligned mono metadata, and direct `Apply ↗` CTAs.
+   * **Layout:** Plain stacked numerals (Summer 2027: 500+, Active: 3,000, Companies: 500+), text tabs with active underline, single-column job list with bold company, regular role title, right-aligned mono metadata, degree & location toggles (`[Undergrad Only]`, `[US Only]`, `[Remote Only]`), and direct `Apply ↗` CTAs.
 5. **Real-Time Telegram Push Alerts:**
-   * Interactive bot (`@dylan_job_tracker_bot`) supporting:
-     * `/watch term Summer 2027` — Alerts only for newly posted internships.
-     * `/watch <Company>` — Alerts for specific target companies.
-     * `/add_company <name>` — Dynamically tracks new company boards.
-     * `/mode <instant|digest|pause>` — Switch between instant alerts and daily digests.
-     * `/find <query>` — Instant database lookup from chat.
+   * Interactive bot (`@dylan_job_tracker_bot`) with instantaneous push alerts and multi-keyword tracking.
+   
+   <p align="center">
+     <img src="docs/assets/telegram_bot.png" width="400" alt="Telegram Bot Alerts" />
+   </p>
+
 6. **Data Orchestration with Dagster:**
    * Software-Defined Assets (SDAs) and 15-minute recurring automated schedules visible in Dagster UI at `http://localhost:3000/`.
+   
+   ![Dagster Automated Pipeline](docs/assets/dagster_pipeline.gif)
 
 ---
 
@@ -93,6 +101,8 @@ Start PostgreSQL, the FastAPI Web Dashboard, Dagster Orchestration, and the Tele
 # or
 make dev
 ```
+
+![1-Command Terminal Startup](docs/assets/terminal_startup.gif)
 
 #### **Option B: Manual Multi-Terminal Execution**
 If you prefer running services in separate terminal windows:
