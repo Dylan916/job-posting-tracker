@@ -4,10 +4,6 @@ An event-driven data engineering pipeline, multi-ATS watcher, and real-time aler
 
 > **⚡ 100% Autonomous & Background-First:** InternIndex operates continuously in the background as a self-hosted daemon or Dagster cron pipeline. You never need to keep a browser open or manually refresh spreadsheets—the system monitors 3,000+ companies while you code, study, or sleep, and pings your phone the instant a target role opens.
 
----
-
-## 🖥️ Minimalist Web Dashboard
-
 ![InternIndex Web Dashboard](docs/assets/dashboard.png)
 
 ---
