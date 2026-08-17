@@ -2,6 +2,8 @@
 
 An event-driven data engineering pipeline, multi-ATS watcher, and real-time alert system that ingests tech internship postings across aggregators and direct company ATS APIs (Greenhouse, Ashby, Lever), detects new openings via idempotent PostgreSQL diffing, and dispatches sub-second alerts (Telegram bot + minimalist Web Dashboard).
 
+> **⚡ 100% Autonomous & Background-First:** InternIndex operates continuously in the background as a self-hosted daemon or Dagster cron pipeline. You never need to keep a browser open or manually refresh spreadsheets—the system monitors 3,000+ companies while you code, study, or sleep, and pings your phone the instant a target role opens.
+
 ---
 
 ## 🏗️ Architecture Overview
