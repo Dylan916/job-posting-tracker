@@ -19,6 +19,7 @@ def list_postings(
     location: str | None = Query(None, description="Filter by location string"),
     is_remote: bool | None = Query(None, description="Filter remote positions"),
     is_us_only: bool | None = Query(None, description="Filter exclusively for US-based positions"),
+    is_undergrad_only: bool | None = Query(None, description="Filter out PhD, Masters, MBA, and graduate degree roles"),
     is_active: bool | None = Query(True, description="Filter active/open positions (default true)"),
     source: str | None = Query(None, description="Filter by data source (e.g. 'simplify_github', 'greenhouse_cloudflare')"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -58,6 +59,12 @@ def list_postings(
         non_us_regex = r"\y(UK|Canada|London|Toronto|Vancouver|Waterloo|Montreal|Singapore|India|Australia|Sydney|Berlin|Germany|France|Paris|Dublin|Ireland|Zurich|Switzerland|Tokyo|Japan|Seoul|Korea)\y"
         conditions.append(f"(location ~* %s AND (location !~* %s OR location ~* '\\y(USA|United States|CA|NY|TX|WA|IL)\\y'))")
         params.extend([us_regex, non_us_regex])
+
+    if is_undergrad_only is True:
+        # Exclude PhD, Masters, MBA, and Advanced Degree roles
+        grad_regex = r"\y(PhD|Ph\.D\.|Doctoral|Doctorate|Masters|Master'?s|MBA|Advanced Degree|Postdoc|Post-Doc)\y"
+        conditions.append("title !~* %s")
+        params.append(grad_regex)
 
     if is_active is not None:
         conditions.append("is_active = %s")

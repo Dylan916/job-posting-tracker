@@ -11,6 +11,7 @@ const state = {
     keyword: '',
     is_remote: null,
     is_us_only: null,
+    is_undergrad_only: null,
     page: 1,
     page_size: 20,
     sort_by: 'posted_at',
@@ -25,8 +26,9 @@ const elements = {
     searchInput: document.getElementById('search-input'),
     clearSearchBtn: document.getElementById('clear-search'),
     companySelect: document.getElementById('company-select'),
-    remoteToggle: document.getElementById('remote-toggle'),
+    undergradToggle: document.getElementById('undergrad-toggle'),
     usOnlyToggle: document.getElementById('us-only-toggle'),
+    remoteToggle: document.getElementById('remote-toggle'),
     sortSelect: document.getElementById('sort-select'),
     postingsGrid: document.getElementById('postings-grid'),
     currentCountDisplay: document.getElementById('current-count-display'),
@@ -100,7 +102,19 @@ function setupEventListeners() {
         loadPostings();
     });
 
-    // 4. US Only Toggle
+    // 4. Undergrad Only Toggle
+    if (elements.undergradToggle) {
+        elements.undergradToggle.addEventListener('click', () => {
+            const isActive = state.is_undergrad_only === true;
+            state.is_undergrad_only = isActive ? null : true;
+            elements.undergradToggle.classList.toggle('active', !isActive);
+            state.page = 1;
+            renderActiveFilterTags();
+            loadPostings();
+        });
+    }
+
+    // 5. US Only Toggle
     if (elements.usOnlyToggle) {
         elements.usOnlyToggle.addEventListener('click', () => {
             const isActive = state.is_us_only === true;
@@ -112,7 +126,7 @@ function setupEventListeners() {
         });
     }
 
-    // 5. Remote Only Toggle
+    // 6. Remote Only Toggle
     elements.remoteToggle.addEventListener('click', () => {
         const isActive = state.is_remote === true;
         state.is_remote = isActive ? null : true;
@@ -122,7 +136,7 @@ function setupEventListeners() {
         loadPostings();
     });
 
-    // 6. Sort Selector
+    // 7. Sort Selector
     elements.sortSelect.addEventListener('change', (e) => {
         const [field, order] = e.target.value.split(':');
         state.sort_by = field;
@@ -204,6 +218,7 @@ async function loadPostings() {
             keyword: state.keyword,
             is_remote: state.is_remote,
             is_us_only: state.is_us_only,
+            is_undergrad_only: state.is_undergrad_only,
             page: state.page,
             page_size: state.page_size,
             sort_by: state.sort_by,
@@ -317,6 +332,13 @@ function renderActiveFilterTags() {
         }});
     }
 
+    if (state.is_undergrad_only) {
+        tags.push({ label: 'Undergrad Only', remove: () => {
+            state.is_undergrad_only = null;
+            if (elements.undergradToggle) elements.undergradToggle.classList.remove('active');
+        }});
+    }
+
     if (state.is_us_only) {
         tags.push({ label: 'US Only', remove: () => {
             state.is_us_only = null;
@@ -362,9 +384,11 @@ window.resetAllFilters = function() {
     state.company = '';
     state.is_remote = null;
     state.is_us_only = null;
+    state.is_undergrad_only = null;
     elements.searchInput.value = '';
     elements.clearSearchBtn.style.display = 'none';
     elements.companySelect.value = '';
+    if (elements.undergradToggle) elements.undergradToggle.classList.remove('active');
     if (elements.usOnlyToggle) elements.usOnlyToggle.classList.remove('active');
     elements.remoteToggle.classList.remove('active');
     state.page = 1;

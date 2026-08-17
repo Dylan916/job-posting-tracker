@@ -20,6 +20,9 @@ export const apiClient = {
         if (params.is_us_only !== undefined && params.is_us_only !== null) {
             query.set('is_us_only', params.is_us_only);
         }
+        if (params.is_undergrad_only !== undefined && params.is_undergrad_only !== null) {
+            query.set('is_undergrad_only', params.is_undergrad_only);
+        }
         if (params.page) query.set('page', params.page);
         if (params.page_size) query.set('page_size', params.page_size);
         if (params.sort_by) query.set('sort_by', params.sort_by);
