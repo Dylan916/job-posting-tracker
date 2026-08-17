@@ -83,24 +83,28 @@ uv sync
 uv run python db/init_db.py
 ```
 
-### 3. Run Ingestion Pipeline
+### 3. Start Services
+
+#### **Option A: 1-Command Launcher (Recommended)**
+Start PostgreSQL, the FastAPI Web Dashboard, Dagster Orchestration, and the Telegram Bot concurrently with graceful `Ctrl + C` shutdown:
+
 ```bash
-# Ingest all postings from SimplifyJobs & direct watched ATS boards
-uv run python -m ingestion.runner
+./start.sh
+# or
+make dev
 ```
 
-### 4. Start Services
-
-Open separate terminals or run in background:
+#### **Option B: Manual Multi-Terminal Execution**
+If you prefer running services in separate terminal windows:
 
 ```bash
-# Start FastAPI Backend & Web Dashboard (Port 8000)
+# Terminal 1: FastAPI Backend & Web Dashboard (Port 8000)
 uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
 
-# Start Dagster Orchestration Webserver (Port 3000)
+# Terminal 2: Dagster Automated Pipeline (Port 3000)
 uv run dagster dev -f orchestration/definitions.py -p 3000
 
-# Start Telegram Alert Bot Daemon
+# Terminal 3: Telegram Alert Bot Daemon
 uv run python -m notifications.bot
 ```
 
