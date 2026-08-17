@@ -19,16 +19,16 @@ echo -e "${BOLD}${CYAN}⚡ Starting InternIndex Platform...${NC}\n"
 echo -e "${YELLOW}1/4 Checking PostgreSQL container...${NC}"
 docker compose up -d
 
-# 2. Trap SIGINT (Ctrl+C) and SIGTERM for graceful shutdown
+# 2. Trap SIGINT (Ctrl+C) and SIGTERM for instantaneous single-keypress shutdown
 cleanup() {
+    trap - SIGINT SIGTERM # Disarm traps to avoid double trigger
     echo -e "\n${YELLOW}Shutting down InternIndex services...${NC}"
-    if [ -n "$FASTAPI_PID" ]; then kill "$FASTAPI_PID" 2>/dev/null || true; fi
-    if [ -n "$DAGSTER_PID" ]; then kill "$DAGSTER_PID" 2>/dev/null || true; fi
-    if [ -n "$BOT_PID" ]; then kill "$BOT_PID" 2>/dev/null || true; fi
+    kill -TERM "$FASTAPI_PID" "$DAGSTER_PID" "$BOT_PID" 2>/dev/null || true
+    wait "$FASTAPI_PID" "$DAGSTER_PID" "$BOT_PID" 2>/dev/null || true
     echo -e "${GREEN}✓ All services stopped cleanly.${NC}"
     exit 0
 }
-trap cleanup SIGINT SIGTERM EXIT
+trap cleanup SIGINT SIGTERM
 
 # 3. Start FastAPI Backend & Web Dashboard (Port 8000)
 echo -e "${YELLOW}2/4 Starting FastAPI Backend & Web Dashboard on :8000...${NC}"
@@ -56,7 +56,7 @@ echo -e "• ${BOLD}📊 Dagster Pipeline DAG:${NC} ${CYAN}http://localhost:3000
 echo -e "• ${BOLD}🤖 Telegram Alert Bot:${NC}   ${CYAN}https://t.me/dylan_job_tracker_bot${NC}"
 echo -e "${BOLD}${GREEN}======================================================${NC}"
 echo -e "${YELLOW}👉 Hold [Cmd / Ctrl] and click any link above to open in your browser!${NC}"
-echo -e "${YELLOW}Press [Ctrl + C] anytime to stop all services cleanly.${NC}\n"
+echo -e "${YELLOW}Press [Ctrl + C] once anytime to stop all services cleanly.${NC}\n"
 
 # Keep the script running to stream logs and wait for signal
 wait
