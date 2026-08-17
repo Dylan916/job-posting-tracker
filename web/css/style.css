@@ -210,7 +210,7 @@ body {
 
 /* Main Container */
 .main-container {
-    max-width: 1400px;
+    max-width: 1200px;
     width: 100%;
     margin: 0 auto;
     padding: 2rem 1.5rem;
@@ -329,12 +329,9 @@ body {
     color: var(--text-muted);
 }
 
-/* Dashboard Split Layout */
-.dashboard-layout {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 1.5rem;
-    align-items: start;
+/* Job Explorer Section */
+.job-explorer-section {
+    width: 100%;
 }
 
 /* Term Tabs */

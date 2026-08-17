@@ -3,7 +3,6 @@
  */
 
 import { apiClient } from './api.js';
-import { renderSkillsChart } from './charts.js';
 
 // Application State
 const state = {
@@ -15,7 +14,6 @@ const state = {
     page_size: 15,
     sort_by: 'posted_at',
     sort_order: 'desc',
-    skill_category: '',
     totalPages: 1,
     totalItems: 0,
 };
@@ -37,8 +35,6 @@ const elements = {
     activeTagsRow: document.getElementById('active-tags-row'),
     tagsContainer: document.getElementById('tags-container'),
     resetFiltersBtn: document.getElementById('reset-filters-btn'),
-    skillCatPills: document.getElementById('skill-cat-pills'),
-    skillsChartList: document.getElementById('skills-chart-list'),
     val2027Count: document.getElementById('val-2027-count'),
     valActiveCount: document.getElementById('val-active-count'),
     valCompaniesCount: document.getElementById('val-companies-count'),
@@ -50,7 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     await loadInitialStats();
     await loadPostings();
-    await loadSkills();
 });
 
 /**
@@ -69,7 +64,6 @@ function setupEventListeners() {
         state.page = 1;
         updateTermContext();
         loadPostings();
-        loadSkills();
     });
 
     // 2. Debounced Keyword Search
@@ -144,18 +138,6 @@ function setupEventListeners() {
     elements.resetFiltersBtn.addEventListener('click', () => {
         resetAllFilters();
     });
-
-    // 8. Skill Category Pills
-    elements.skillCatPills.addEventListener('click', (e) => {
-        const pill = e.target.closest('.cat-pill');
-        if (!pill) return;
-
-        elements.skillCatPills.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-
-        state.skill_category = pill.dataset.cat;
-        loadSkills();
-    });
 }
 
 /**
@@ -173,7 +155,7 @@ async function loadInitialStats() {
         // Check 2027 count in terms breakdown
         const term2027 = stats.postings_by_term.find(t => t.term.includes('2027'));
         if (term2027) {
-            if (elements.val2027Count) elements.val2027Count.textContent = `${term2027.count}+`;
+            if (elements.val2027Count) elements.val2027Count.textContent = `${term2027.count}`;
             if (elements.badge2027) elements.badge2027.textContent = term2027.count;
         }
 
@@ -299,26 +281,6 @@ function renderEmptyState() {
             <button class="btn btn-apply" style="margin-top: 1rem;" onclick="window.resetAllFilters()">Reset Filters</button>
         </div>
     `;
-}
-
-/**
- * Load Top Skills & Render Interactive Chart
- */
-async function loadSkills() {
-    try {
-        const skills = await apiClient.getTopSkills(state.term, state.skill_category, 10);
-        renderSkillsChart(elements.skillsChartList, skills, (selectedSkill) => {
-            // Filter board when clicking a skill bar
-            state.keyword = selectedSkill;
-            elements.searchInput.value = selectedSkill;
-            elements.clearSearchBtn.style.display = 'block';
-            state.page = 1;
-            renderActiveFilterTags();
-            loadPostings();
-        });
-    } catch (err) {
-        console.error('Failed to load skills:', err);
-    }
 }
 
 /**

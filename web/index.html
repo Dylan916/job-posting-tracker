@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InternPulse — Real-Time Internship & Tech Job Tracker</title>
-    <meta name="description" content="Real-time tech internship tracker for Summer 2027, Fall 2026, and full-time roles with instant 1-click applications and skill-demand analytics.">
+    <title>InternPulse — Real-Time Tech Internship Tracker</title>
+    <meta name="description" content="Real-time tech internship tracker for Summer 2027, Fall 2026, and full-time roles with instant 1-click applications.">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +21,7 @@
                 <div class="logo-icon">⚡</div>
                 <div class="brand-text">
                     <h1>InternPulse</h1>
-                    <span class="brand-badge">2027 Recruiting</span>
+                    <span class="brand-badge">Summer 2027</span>
                 </div>
             </div>
 
@@ -30,7 +30,7 @@
                     <span class="dot live-dot"></span> API Docs
                 </a>
                 <a href="http://localhost:3000" target="_blank" class="nav-link" id="nav-dagster">
-                    <span class="icon">📊</span> Pipeline DAG
+                    <span class="icon">📊</span> Dagster Pipelines
                 </a>
                 <a href="https://t.me/dylan_job_tracker_bot" target="_blank" class="btn btn-telegram" id="nav-telegram-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
@@ -50,7 +50,7 @@
                     Live Automated Ingestion Active
                 </div>
                 <h2 class="hero-title">Track Tech Internships in Real-Time</h2>
-                <p class="hero-subtitle">Automated ATS tracking, full-text search, direct 1-click applications, and skill demand analytics.</p>
+                <p class="hero-subtitle">Multi-source ATS tracking, instant full-text search, verified live links, and 1-click applications.</p>
             </div>
 
             <!-- Live Metrics Grid -->
@@ -58,7 +58,7 @@
                 <div class="metric-card" id="metric-2027">
                     <div class="metric-icon metric-purple">🎯</div>
                     <div class="metric-info">
-                        <span class="metric-value" id="val-2027-count">415+</span>
+                        <span class="metric-value" id="val-2027-count">415</span>
                         <span class="metric-label">Summer 2027 Internships</span>
                     </div>
                 </div>
@@ -82,146 +82,98 @@
                 <div class="metric-card" id="metric-speed">
                     <div class="metric-icon metric-amber">⚡</div>
                     <div class="metric-info">
-                        <span class="metric-value">0.65 ms</span>
-                        <span class="metric-label">PostgreSQL Query Latency</span>
+                        <span class="metric-value">&lt; 1 ms</span>
+                        <span class="metric-label">Indexed Query Latency</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Main Dashboard Split Layout -->
-        <div class="dashboard-layout">
-            <!-- Left & Center: Job Explorer -->
-            <section class="job-explorer-section">
-                <!-- Term Switcher Tabs -->
-                <div class="term-tabs-container">
-                    <div class="term-tabs" id="term-tabs">
-                        <button class="term-tab active" data-term="Summer 2027" id="tab-summer-2027">
-                            <span>☀️ Summer 2027</span>
-                            <span class="tab-badge" id="badge-2027">415</span>
-                        </button>
-                        <button class="term-tab" data-term="Summer 2026" id="tab-summer-2026">
-                            <span>🏖️ Summer 2026</span>
-                        </button>
-                        <button class="term-tab" data-term="Fall 2026" id="tab-fall-2026">
-                            <span>🍂 Fall 2026</span>
-                        </button>
-                        <button class="term-tab" data-term="Winter 2027" id="tab-winter-2027">
-                            <span>❄️ Winter / Spring 2027</span>
-                        </button>
-                        <button class="term-tab" data-term="" id="tab-all-active">
-                            <span>🌐 All Active Roles</span>
-                        </button>
-                    </div>
+        <!-- Full-Width Job Explorer Section -->
+        <section class="job-explorer-section">
+            <!-- Term Switcher Tabs -->
+            <div class="term-tabs-container">
+                <div class="term-tabs" id="term-tabs">
+                    <button class="term-tab active" data-term="Summer 2027" id="tab-summer-2027">
+                        <span>☀️ Summer 2027</span>
+                        <span class="tab-badge" id="badge-2027">415</span>
+                    </button>
+                    <button class="term-tab" data-term="Summer 2026" id="tab-summer-2026">
+                        <span>🏖️ Summer 2026</span>
+                    </button>
+                    <button class="term-tab" data-term="Fall 2026" id="tab-fall-2026">
+                        <span>🍂 Fall 2026</span>
+                    </button>
+                    <button class="term-tab" data-term="Winter 2027" id="tab-winter-2027">
+                        <span>❄️ Winter / Spring 2027</span>
+                    </button>
+                    <button class="term-tab" data-term="" id="tab-all-active">
+                        <span>🌐 All Active Roles</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search & Filters Control Bar -->
+            <div class="filter-bar">
+                <div class="search-box">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-input" placeholder="Search by role (e.g. Software Engineer, Data, AI, Trading)..." autocomplete="off">
+                    <button class="clear-search-btn" id="clear-search" style="display: none;">×</button>
                 </div>
 
-                <!-- Search & Filters Control Bar -->
-                <div class="filter-bar">
-                    <div class="search-box">
-                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        <input type="text" id="search-input" placeholder="Search by role (e.g. Software Engineer, Data, AI)..." autocomplete="off">
-                        <button class="clear-search-btn" id="clear-search" style="display: none;">×</button>
-                    </div>
-
-                    <div class="filter-controls">
-                        <!-- Company Dropdown -->
-                        <div class="select-wrapper">
-                            <select id="company-select" class="custom-select">
-                                <option value="">All Companies</option>
-                            </select>
-                        </div>
-
-                        <!-- Remote Toggle Button -->
-                        <button class="toggle-btn" id="remote-toggle" data-active="false">
-                            <span class="toggle-icon">🏠</span> Remote Only
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Active Filter Tags Row -->
-                <div class="active-tags-row" id="active-tags-row" style="display: none;">
-                    <span class="filter-label">Active Filters:</span>
-                    <div class="tags-container" id="tags-container"></div>
-                    <button class="reset-filters-btn" id="reset-filters-btn">Reset All</button>
-                </div>
-
-                <!-- Job Postings Header & Counter -->
-                <div class="postings-header">
-                    <div class="results-count">
-                        Showing <strong id="current-count-display">0</strong> postings
-                        <span id="term-context-label" class="term-context">for Summer 2027</span>
-                    </div>
-                    <div class="sort-wrapper">
-                        <label for="sort-select">Sort:</label>
-                        <select id="sort-select" class="custom-select-sm">
-                            <option value="posted_at:desc">Newest First</option>
-                            <option value="company:asc">Company (A-Z)</option>
-                            <option value="title:asc">Role Title (A-Z)</option>
+                <div class="filter-controls">
+                    <!-- Company Dropdown -->
+                    <div class="select-wrapper">
+                        <select id="company-select" class="custom-select">
+                            <option value="">All Companies</option>
                         </select>
                     </div>
+
+                    <!-- Remote Toggle Button -->
+                    <button class="toggle-btn" id="remote-toggle" data-active="false">
+                        <span class="toggle-icon">🏠</span> Remote Only
+                    </button>
                 </div>
+            </div>
 
-                <!-- Postings Grid -->
-                <div class="postings-grid" id="postings-grid">
-                    <div class="loading-spinner-container" id="loading-spinner">
-                        <div class="spinner"></div>
-                        <p>Fetching latest verified postings...</p>
-                    </div>
+            <!-- Active Filter Tags Row -->
+            <div class="active-tags-row" id="active-tags-row" style="display: none;">
+                <span class="filter-label">Active Filters:</span>
+                <div class="tags-container" id="tags-container"></div>
+                <button class="reset-filters-btn" id="reset-filters-btn">Reset All</button>
+            </div>
+
+            <!-- Job Postings Header & Counter -->
+            <div class="postings-header">
+                <div class="results-count">
+                    Showing <strong id="current-count-display">0</strong> postings
+                    <span id="term-context-label" class="term-context">for Summer 2027</span>
                 </div>
-
-                <!-- Pagination Bar -->
-                <div class="pagination-bar" id="pagination-bar">
-                    <button class="page-btn" id="prev-page-btn" disabled>← Previous</button>
-                    <div class="page-indicator" id="page-indicator">Page 1 of 1</div>
-                    <button class="page-btn" id="next-page-btn" disabled>Next →</button>
+                <div class="sort-wrapper">
+                    <label for="sort-select">Sort:</label>
+                    <select id="sort-select" class="custom-select-sm">
+                        <option value="posted_at:desc">Newest First</option>
+                        <option value="company:asc">Company (A-Z)</option>
+                        <option value="title:asc">Role Title (A-Z)</option>
+                    </select>
                 </div>
-            </section>
+            </div>
 
-            <!-- Right Sidebar: Skill Analytics & Trend Insights -->
-            <aside class="sidebar-section">
-                <!-- Skill Demand Analytics Card -->
-                <div class="sidebar-card">
-                    <div class="card-header">
-                        <div class="card-title-group">
-                            <span class="card-icon">📈</span>
-                            <h3>Top In-Demand Skills</h3>
-                        </div>
-                        <span class="card-badge">ATS Enriched</span>
-                    </div>
-                    <p class="card-desc">Extracted from full job descriptions & requirements across active engineering roles.</p>
-
-                    <!-- Category Pills -->
-                    <div class="skill-cat-pills" id="skill-cat-pills">
-                        <button class="cat-pill active" data-cat="">All</button>
-                        <button class="cat-pill" data-cat="Languages">Languages</button>
-                        <button class="cat-pill" data-cat="Cloud & DevOps">Cloud</button>
-                        <button class="cat-pill" data-cat="Data & AI/ML">AI / Data</button>
-                        <button class="cat-pill" data-cat="Frameworks">Web</button>
-                    </div>
-
-                    <!-- Skills Chart Container -->
-                    <div class="skills-chart-list" id="skills-chart-list">
-                        <div class="loading-mini-spinner"></div>
-                    </div>
+            <!-- Postings Grid -->
+            <div class="postings-grid" id="postings-grid">
+                <div class="loading-spinner-container" id="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Fetching verified live postings...</p>
                 </div>
+            </div>
 
-                <!-- Telegram Alerts Promo Card -->
-                <div class="sidebar-card telegram-promo-card">
-                    <div class="promo-header">
-                        <div class="promo-icon">🔔</div>
-                        <h4>Instant Phone Alerts</h4>
-                    </div>
-                    <p class="promo-text">Never miss new Summer 2027 postings. Get instant Telegram alerts the second a company publishes a new role.</p>
-                    <div class="promo-commands">
-                        <code>/watch term Summer 2027</code>
-                        <code>/find Summer 2027 10</code>
-                    </div>
-                    <a href="https://t.me/dylan_job_tracker_bot" target="_blank" class="btn btn-telegram-full">
-                        Open Bot in Telegram ↗
-                    </a>
-                </div>
-            </aside>
-        </div>
+            <!-- Pagination Bar -->
+            <div class="pagination-bar" id="pagination-bar">
+                <button class="page-btn" id="prev-page-btn" disabled>← Previous</button>
+                <div class="page-indicator" id="page-indicator">Page 1 of 1</div>
+                <button class="page-btn" id="next-page-btn" disabled>Next →</button>
+            </div>
+        </section>
     </main>
 
     <!-- Footer -->
@@ -231,7 +183,7 @@
             <div class="footer-links">
                 <a href="/docs" target="_blank">FastAPI Docs</a>
                 <a href="http://localhost:3000" target="_blank">Dagster UI</a>
-                <a href="https://github.com/SimplifyJobs/Summer2027-Internships" target="_blank">SimplifyJobs Source</a>
+                <a href="https://t.me/dylan_job_tracker_bot" target="_blank">Telegram Bot</a>
             </div>
         </div>
     </footer>
