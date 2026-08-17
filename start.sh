@@ -47,18 +47,22 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
+# 2. Run initial fast sync to catch up on any commits pushed while offline
+echo -e "${YELLOW}2/5 Syncing latest postings from GitHub & ATS feeds...${NC}"
+uv run python -m ingestion.runner >/dev/null 2>&1 || true
+
 # 3. Start FastAPI Backend & Web Dashboard (Port 8000)
-echo -e "${YELLOW}2/4 Starting FastAPI Backend & Web Dashboard on :8000...${NC}"
+echo -e "${YELLOW}3/5 Starting FastAPI Backend & Web Dashboard on :8000...${NC}"
 uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 &
 FASTAPI_PID=$!
 
 # 4. Start Dagster Orchestration Dev Webserver (Port 3000)
-echo -e "${YELLOW}3/4 Starting Dagster Orchestration Pipeline on :3000...${NC}"
+echo -e "${YELLOW}4/5 Starting Dagster Orchestration Pipeline on :3000...${NC}"
 uv run dagster dev -f orchestration/definitions.py -p 3000 --host 127.0.0.1 &
 DAGSTER_PID=$!
 
 # 5. Start Telegram Alert Bot Daemon
-echo -e "${YELLOW}4/4 Starting Telegram Bot Listener Daemon...${NC}"
+echo -e "${YELLOW}5/5 Starting Telegram Bot Listener Daemon...${NC}"
 uv run python -m notifications.bot &
 BOT_PID=$!
 
