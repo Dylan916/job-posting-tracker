@@ -15,8 +15,20 @@ NC='\033[0m' # No Color
 
 echo -e "${BOLD}${CYAN}⚡ Starting InternIndex Platform...${NC}\n"
 
-# 1. Start PostgreSQL via Docker if not already running
+# 1. Start PostgreSQL via Docker (auto-launch Docker Desktop if closed)
 echo -e "${YELLOW}1/4 Checking PostgreSQL container...${NC}"
+if ! docker info >/dev/null 2>&1; then
+    echo -e "${CYAN}Docker is not running. Launching Docker Desktop...${NC}"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        open -a Docker
+    fi
+    echo -n "Waiting for Docker daemon to become ready"
+    while ! docker info >/dev/null 2>&1; do
+        echo -n "."
+        sleep 2
+    done
+    echo -e " ${GREEN}Ready!${NC}"
+fi
 docker compose up -d
 
 # 2. Trap SIGINT (Ctrl+C) and SIGTERM for instantaneous shutdown
