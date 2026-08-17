@@ -1,0 +1,21 @@
+[Unit]
+Description=InternPulse Real-Time Internship Tracker Pipeline & Web Dashboard
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=%I
+WorkingDirectory=/home/%I/job-posting-tracker
+EnvironmentFile=/home/%I/job-posting-tracker/.env
+ExecStart=/home/%I/.cargo/bin/uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5s
+
+# Resource & Sandboxing limits
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

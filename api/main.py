@@ -1,10 +1,11 @@
 """FastAPI main application entrypoint."""
 
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.routes.health import router as health_router
 from api.routes.postings import router as postings_router
@@ -24,7 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title="Real-Time Internship & Job Posting Tracker API",
+    title="InternPulse — Real-Time Internship & Job Tracker API",
     description="REST API for querying tech internships, filtering by recruiting seasons (Summer 2027), and analyzing hiring trends.",
     version="1.0.0",
     lifespan=lifespan,
@@ -47,11 +48,10 @@ app.include_router(postings_router, prefix="/api/v1")
 app.include_router(skills_router, prefix="/api/v1")
 app.include_router(stats_router, prefix="/api/v1")
 
-
-@app.get("/", include_in_schema=False)
-def root() -> RedirectResponse:
-    """Redirect root path to interactive OpenAPI documentation."""
-    return RedirectResponse(url="/docs")
+# Mount Web Dashboard static directory at root '/'
+web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
+if os.path.exists(web_dir):
+    app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
 
 if __name__ == "__main__":
