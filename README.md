@@ -122,9 +122,14 @@ uv run python -m notifications.bot
 | `/watch keyword <keyword>`| Subscribe to postings containing a keyword. | `/watch keyword Machine Learning` |
 | `/add_company <name>` | Auto-detect and track a company's direct ATS board. | `/add_company ramp` |
 | `/companies` | List all tracked custom ATS company boards. | `/companies` |
-| `/mode <instant\|digest>` | Set notification frequency preference. | `/mode instant` |
+| `/mode <instant\|digest\|pause>` | Set notification delivery mode (instant alerts, daily digest, or pause). | `/mode digest` |
 | `/list` | View your active subscriptions. | `/list` |
 | `/unwatch <id\|all>` | Remove a subscription. | `/unwatch all` |
+
+### 🔔 Notification Delivery Modes:
+* **⚡ `instant` (Default):** Dispatches sub-second Telegram alerts immediately when a new matching posting is detected.
+* **🗞️ `digest` (Daily Summary):** Batches new openings into a daily digest with highlighted top roles and a 1-click dashboard link.
+* **⏸️ `pause`:** Temporarily silences notifications without deleting your subscriptions.
 
 ---
 
