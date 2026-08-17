@@ -12,6 +12,10 @@ wheels/
 # Environment and secrets
 .env
 
+# Dagster local storage
+.dagster_home/
+.tmp_dagster_home*/
+
 # IDE and OS
 .DS_Store
 .vscode/

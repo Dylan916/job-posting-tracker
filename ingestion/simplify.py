@@ -1,4 +1,4 @@
-"""Poller for SimplifyJobs GitHub repository listings."""
+"""Poller for SimplifyJobs GitHub repository listings with active status filtering."""
 
 import os
 from datetime import datetime, timezone
@@ -35,6 +35,9 @@ class SimplifyPoller(SourcePoller):
         if not company or not title:
             return None
 
+        # Check whether the posting is actively open and visible
+        is_active = bool(raw.get("active", True) and raw.get("is_visible", True))
+
         # Determine locations and remote status
         raw_locations = raw.get("locations") or []
         if isinstance(raw_locations, list):
@@ -70,6 +73,7 @@ class SimplifyPoller(SourcePoller):
             location=location_str or None,
             terms=terms,
             is_remote=is_remote,
+            is_active=is_active,
             url=url,
             posted_at=posted_at,
             raw_json=raw,

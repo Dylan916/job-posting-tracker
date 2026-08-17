@@ -15,6 +15,7 @@ class NormalizedPosting(BaseModel):
     location: str | None = None
     terms: list[str] = Field(default_factory=list)
     is_remote: bool = False
+    is_active: bool = True
     url: str | None = None
     posted_at: datetime | None = None
     raw_json: dict[str, Any] = Field(default_factory=dict)

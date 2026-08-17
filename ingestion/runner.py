@@ -36,7 +36,7 @@ def upsert_postings(
         INSERT INTO postings (
             source, external_id, company, title, location, terms, is_remote, url, posted_at, raw_json, is_active, last_seen_at
         ) VALUES (
-            %(source)s, %(external_id)s, %(company)s, %(title)s, %(location)s, %(terms)s, %(is_remote)s, %(url)s, %(posted_at)s, %(raw_json)s, TRUE, NOW()
+            %(source)s, %(external_id)s, %(company)s, %(title)s, %(location)s, %(terms)s, %(is_remote)s, %(url)s, %(posted_at)s, %(raw_json)s, %(is_active)s, NOW()
         )
         ON CONFLICT (source, external_id) DO UPDATE SET
             company = EXCLUDED.company,
@@ -44,11 +44,11 @@ def upsert_postings(
             location = EXCLUDED.location,
             terms = EXCLUDED.terms,
             is_remote = EXCLUDED.is_remote,
+            is_active = EXCLUDED.is_active,
             url = EXCLUDED.url,
             raw_json = EXCLUDED.raw_json,
-            last_seen_at = NOW(),
-            is_active = TRUE
-        RETURNING id, source, external_id, company, title, location, terms, is_remote, url, posted_at, (xmax = 0) AS is_new;
+            last_seen_at = NOW()
+        RETURNING id, source, external_id, company, title, location, terms, is_remote, is_active, url, posted_at, (xmax = 0) AS is_new;
     """
 
     new_records: list[dict[str, Any]] = []
@@ -65,6 +65,7 @@ def upsert_postings(
                 "location": p.location,
                 "terms": p.terms_display,
                 "is_remote": p.is_remote,
+                "is_active": p.is_active,
                 "url": p.url,
                 "posted_at": p.posted_at,
                 "raw_json": Jsonb(p.raw_json),
@@ -72,7 +73,7 @@ def upsert_postings(
             cur.execute(query, params)
             row = cur.fetchone()
             if row:
-                if row["is_new"]:
+                if row["is_new"] and row["is_active"]:
                     new_count += 1
                     new_records.append(row)
                 else:
@@ -123,7 +124,7 @@ def run_all_pollers(
         )
 
     console.print(table)
-    console.print(f"[bold green]Total new postings detected:[/] {len(all_new_postings)}")
+    console.print(f"[bold green]Total new active postings detected:[/] {len(all_new_postings)}")
     return all_new_postings, all_stats
 
 

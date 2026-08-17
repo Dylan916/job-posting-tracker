@@ -1,4 +1,4 @@
-"""Interactive Telegram bot for managing job alert subscriptions and preferences."""
+"""Interactive Telegram bot for managing job alert subscriptions, preferences, and instant job search."""
 
 import os
 from typing import Any
@@ -9,6 +9,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 from db.connection import get_db_connection
+from notifications.dispatcher import format_batch_message
 
 load_dotenv()
 console = Console()
@@ -47,15 +48,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         f"👋 *Welcome to Job & Internship Alert Tracker!*\n\n"
         f"You are registered (Chat ID: `{chat_id}`).\n"
         f"Current Mode: *{user['notification_mode']}*\n\n"
-        f"📌 *Filter & Watch Commands:*\n"
-        f"• `/watch term Summer 2027` — Alert for Summer 2027 cycle\n"
-        f"• `/watch term Fall 2026` — Alert for Fall 2026 co-ops\n"
-        f"• `/watch <company>` — Alert on company (e.g. `/watch Cloudflare`)\n"
-        f"• `/watch keyword <term>` — Alert on keywords (e.g. `/watch keyword Data`)\n"
+        f"🔍 *Instant Search & Links:*\n"
+        f"• `/find Summer 2027` — Get latest Summer 2027 internship links\n"
+        f"• `/find Stripe` — Get latest Stripe postings\n\n"
+        f"🔔 *Watchlist & Auto-Alerts:*\n"
+        f"• `/watch term Summer 2027` — Alert when new Summer 2027 jobs appear\n"
+        f"• `/watch <company>` — Alert on specific company\n"
+        f"• `/watch keyword <term>` — Alert on title keywords (e.g. `/watch keyword Intern`)\n"
         f"• `/watch all` — Alert on every new posting\n\n"
-        f"⚙️ *Settings & Management:*\n"
+        f"⚙️ *Settings:*\n"
         f"• `/mode <instant|digest|pause>` — Set notification frequency\n"
-        f"• `/list` — View your active filters\n"
+        f"• `/list` — View active filters\n"
         f"• `/unwatch <id|name>` — Delete a filter\n"
         f"• `/help` — Full guide"
     )
@@ -69,25 +72,82 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     help_text = (
         "📖 *Job Tracker Bot Commands:*\n\n"
-        "🔍 *Term & Season Filters:*\n"
-        "• `/watch term Summer 2027` — Track Summer 2027 internships\n"
-        "• `/watch term Fall 2026` — Track Fall 2026 co-ops/internships\n"
-        "• `/watch term Spring 2027` — Track Spring 2027 off-season\n\n"
-        "🏢 *Company & Keyword Filters:*\n"
-        "• `/watch Google` — Notifies when Google posts\n"
-        "• `/watch keyword Software` — Notifies when title contains 'Software'\n"
-        "• `/watch all` — Notifies on all incoming tech postings\n\n"
+        "🔎 *Instant Search & Browse Links:*\n"
+        "• `/find Summer 2027` — Fetch active Summer 2027 openings with links\n"
+        "• `/find Cloudflare` — Fetch latest Cloudflare jobs\n"
+        "• `/find Data Engineer` — Search for specific roles\n\n"
+        "🔔 *Continuous Auto-Alerts:*\n"
+        "• `/watch term Summer 2027` — Real-time ping on new Summer 2027 jobs\n"
+        "• `/watch term Fall 2026` — Real-time ping on Fall 2026 co-ops\n"
+        "• `/watch Google` — Real-time ping when Google posts\n\n"
         "⚙️ *Notification Modes:*\n"
-        "• `/mode instant` — Real-time pings when jobs are detected (default)\n"
+        "• `/mode instant` — Instant pings (default)\n"
         "• `/mode digest` — Aggregated daily evening summary\n"
         "• `/mode pause` — Temporarily mute all alerts\n\n"
         "📋 *Management:*\n"
-        "• `/list` — Show your active filters and ID numbers\n"
-        "• `/unwatch 3` — Delete filter #3\n"
-        "• `/unwatch Google` — Delete filters matching Google\n"
+        "• `/list` — Show your active filters\n"
+        "• `/unwatch <id|name>` — Remove a filter\n"
         "• `/unwatch all` — Clear all filters"
     )
     await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def find_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Search and return active job listings matching query immediately (supports optional count limit)."""
+    if not update.effective_chat or not update.message:
+        return
+
+    args = context.args or []
+    limit = 5
+
+    # Check if the last argument is a numeric count (must be <= 50 and NOT a year like 2026/2027)
+    if args and args[-1].isdigit():
+        val = int(args[-1])
+        if 1 <= val <= 50 and val not in range(2020, 2035):
+            limit = min(val, 15)  # clamp to max 15
+            query_str = " ".join(args[:-1]).strip()
+        else:
+            query_str = " ".join(args).strip()
+    else:
+        query_str = " ".join(args).strip()
+
+    if not query_str:
+        query_str = "Summer 2027"
+
+    await update.message.reply_text(
+        f"🔍 Searching database for *{query_str}* (showing top {limit})...",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, source, company, title, location, terms, is_remote, url, posted_at, first_seen_at
+                FROM postings
+                WHERE is_active = TRUE AND (
+                    terms ILIKE %s OR 
+                    company ILIKE %s OR 
+                    title ILIKE %s OR 
+                    search_vector @@ plainto_tsquery('english', %s)
+                )
+                ORDER BY posted_at DESC NULLS LAST, first_seen_at DESC
+                LIMIT %s;
+                """,
+                (f"%{query_str}%", f"%{query_str}%", f"%{query_str}%", query_str, limit),
+            )
+            results = cur.fetchall()
+
+    if not results:
+        await update.message.reply_text(
+            f"⚠️ No active postings found matching *{query_str}*.\nTry `/find Summer 2027` or `/find Replit`.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    chunks = format_batch_message(results, title=f"📋 *Active Postings Matching:* `{query_str}` ({len(results)} results)")
+    for chunk in chunks:
+        await update.message.reply_text(chunk, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
 
 async def watch_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -118,7 +178,6 @@ async def watch_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     term_filter = None
 
     if first_arg == "all":
-        # Wildcard subscription
         pass
     elif first_arg == "term" and len(args) > 1:
         term_filter = " ".join(args[1:])
@@ -286,7 +345,6 @@ def start_bot() -> None:
     """Start the Telegram bot daemon in polling mode."""
     if not TELEGRAM_BOT_TOKEN:
         console.print("[bold red]Error: TELEGRAM_BOT_TOKEN is not set in .env.[/]")
-        console.print("Please set your bot token from @BotFather in .env to run the bot listener.")
         return
 
     console.print("[bold green]Starting Telegram Bot Listener...[/]")
@@ -294,6 +352,8 @@ def start_bot() -> None:
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("find", find_command))
+    app.add_handler(CommandHandler("search", find_command))
     app.add_handler(CommandHandler("watch", watch_command))
     app.add_handler(CommandHandler("list", list_command))
     app.add_handler(CommandHandler("unwatch", unwatch_command))
