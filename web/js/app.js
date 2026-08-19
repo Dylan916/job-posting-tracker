@@ -2,7 +2,7 @@
  * Roles — Application Controller
  */
 
-import { apiClient } from './api.js';
+import { apiClient } from './api.js?v=6';
 
 // Application State
 const state = {
@@ -66,7 +66,11 @@ function setupEventListeners() {
 
         state.term = tab.dataset.term;
         state.page = 1;
+        state.company = '';
+        elements.companySelect.value = '';
         updateTermContext();
+        renderActiveFilterTags();
+        loadCompanyOptions(state.term);
         loadPostings();
     });
 
@@ -169,17 +173,18 @@ function setupEventListeners() {
 }
 
 /**
- * Load Initial Stats & Fill Company Dropdown
+ * Load Initial Stats (Global metrics)
  */
 async function loadInitialStats() {
     try {
         const stats = await apiClient.getStats();
 
         if (elements.valActiveCount) {
-            elements.valActiveCount.textContent = stats.active_postings.toLocaleString();
+            elements.valActiveCount.textContent = (stats.active_postings || stats.total_postings || 0).toLocaleString();
         }
 
-        const term2027 = stats.postings_by_term.find(t => t.term.includes('2027'));
+        const termsList = stats.by_term || [];
+        const term2027 = termsList.find(t => t.term && t.term.includes('2027'));
         if (term2027) {
             if (elements.val2027Count) elements.val2027Count.textContent = `${term2027.count}`;
             if (elements.badge2027) elements.badge2027.textContent = `(${term2027.count})`;
@@ -187,17 +192,33 @@ async function loadInitialStats() {
 
         const companyCount = stats.top_companies ? stats.top_companies.length : 0;
         if (elements.valCompaniesCount) {
-            elements.valCompaniesCount.textContent = `${stats.total_postings > 1000 ? '500+' : companyCount}`;
+            elements.valCompaniesCount.textContent = `${(stats.total_postings || 0) > 1000 ? '500+' : companyCount}`;
         }
 
-        if (stats.top_companies && stats.top_companies.length > 0) {
-            const options = stats.top_companies.map(c => `
-                <option value="${escapeHtml(c.company)}">${escapeHtml(c.company)} (${c.count})</option>
-            `).join('');
-            elements.companySelect.innerHTML = '<option value="">All Companies</option>' + options;
-        }
+        await loadCompanyOptions(state.term);
     } catch (err) {
         console.error('Failed to load initial stats:', err);
+    }
+}
+
+/**
+ * Dynamically Populate Company Dropdown Scoped to Active Term
+ */
+async function loadCompanyOptions(term = null) {
+    try {
+        const stats = await apiClient.getStats(term);
+        if (stats.top_companies && stats.top_companies.length > 0) {
+            const options = stats.top_companies.map(c => `
+                <option value="${escapeHtml(c.company)}" ${state.company === c.company ? 'selected' : ''}>
+                    ${escapeHtml(c.company)} (${c.count})
+                </option>
+            `).join('');
+            elements.companySelect.innerHTML = '<option value="">All Companies</option>' + options;
+        } else {
+            elements.companySelect.innerHTML = '<option value="">All Companies</option>';
+        }
+    } catch (err) {
+        console.error('Failed to load company options:', err);
     }
 }
 

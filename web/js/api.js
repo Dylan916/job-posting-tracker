@@ -37,10 +37,13 @@ export const apiClient = {
     },
 
     /**
-     * Fetch aggregated metrics and stats
+     * Fetch aggregated metrics and stats (optionally scoped to a term)
      */
-    async getStats() {
-        const res = await fetch(`${API_BASE}/stats`);
+    async getStats(term = null) {
+        const query = new URLSearchParams();
+        if (term) query.set('term', term);
+        const url = query.toString() ? `${API_BASE}/stats?${query.toString()}` : `${API_BASE}/stats`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`Failed to fetch stats: ${res.statusText}`);
         return res.json();
     },

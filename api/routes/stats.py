@@ -1,6 +1,6 @@
 """Aggregated statistics and hiring trend endpoints."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 import psycopg
 
 from api.dependencies import get_db
@@ -10,7 +10,10 @@ router = APIRouter(prefix="/stats", tags=["Statistics"])
 
 
 @router.get("", response_model=StatsResponse)
-def get_stats(conn: psycopg.Connection = Depends(get_db)) -> StatsResponse:
+def get_stats(
+    term: str | None = Query(None, description="Optional recruiting season filter (e.g. 'Summer 2027')"),
+    conn: psycopg.Connection = Depends(get_db),
+) -> StatsResponse:
     """Compute aggregate counts, source breakdown, and recruiting cycle distribution."""
     with conn.cursor() as cur:
         # Total and active metrics
@@ -35,15 +38,21 @@ def get_stats(conn: psycopg.Connection = Depends(get_db)) -> StatsResponse:
         """)
         source_rows = cur.fetchall()
 
-        # Top 15 Companies
-        cur.execute("""
+        # Top Companies for filter dropdown (dynamically scoped to term if provided)
+        company_where = "WHERE company IS NOT NULL AND company != '' AND is_active = TRUE"
+        company_params: list[str] = []
+        if term and term.strip():
+            company_where += " AND (terms ILIKE %s OR title ILIKE %s)"
+            company_params.extend([f"%{term.strip()}%", f"%{term.strip()}%"])
+
+        cur.execute(f"""
             SELECT company, COUNT(*) AS count 
             FROM postings 
-            WHERE company IS NOT NULL AND company != ''
+            {company_where}
             GROUP BY company 
-            ORDER BY count DESC 
-            LIMIT 15;
-        """)
+            ORDER BY count DESC, company ASC
+            LIMIT 100;
+        """, company_params)
         company_rows = cur.fetchall()
 
         # Breakdown by Season/Term
