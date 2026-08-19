@@ -6,6 +6,10 @@
 
 set -e
 
+# Ensure Dagster uses a single clean local home directory
+export DAGSTER_HOME="${PWD}/.dagster_home"
+mkdir -p "$DAGSTER_HOME"
+
 # ANSI Color Tokens
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
