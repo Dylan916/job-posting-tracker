@@ -43,6 +43,8 @@ cleanup() {
     if [ -n "$FASTAPI_PID" ]; then kill -9 "$FASTAPI_PID" 2>/dev/null || true; fi
     if [ -n "$DAGSTER_PID" ]; then kill -9 "$DAGSTER_PID" 2>/dev/null || true; fi
     if [ -n "$BOT_PID" ]; then kill -9 "$BOT_PID" 2>/dev/null || true; fi
+    if [ -n "$POLLER_PID" ]; then kill -9 "$POLLER_PID" 2>/dev/null || true; fi
+    pkill -9 -f "run_pipeline.py" 2>/dev/null || true
     pkill -9 -f "notifications.bot" 2>/dev/null || true
     pkill -9 -f "orchestration/definitions.py" 2>/dev/null || true
     pkill -9 -f "uvicorn api.main:app" 2>/dev/null || true
@@ -51,9 +53,9 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-# 2. Run initial fast sync to catch up on any commits pushed while offline
-echo -e "${YELLOW}2/5 Syncing latest postings from GitHub & ATS feeds...${NC}"
-uv run python -m ingestion.runner >/dev/null 2>&1 || true
+# 2. Run initial sync & alert dispatch to catch up on postings added while offline
+echo -e "${YELLOW}2/5 Ingesting feeds & dispatching pending alerts...${NC}"
+uv run python run_pipeline.py --once >/dev/null 2>&1 || true
 
 # 3. Start FastAPI Backend & Web Dashboard (Port 8000)
 echo -e "${YELLOW}3/5 Starting FastAPI Backend & Web Dashboard on :8000...${NC}"
@@ -65,10 +67,13 @@ echo -e "${YELLOW}4/5 Starting Dagster Orchestration Pipeline on :3000...${NC}"
 uv run dagster dev -f orchestration/definitions.py -p 3000 --host 127.0.0.1 &
 DAGSTER_PID=$!
 
-# 5. Start Telegram Alert Bot Daemon
-echo -e "${YELLOW}5/5 Starting Telegram Bot Listener Daemon...${NC}"
+# 5. Start Telegram Alert Bot Daemon & Continuous Poller
+echo -e "${YELLOW}5/5 Starting Telegram Bot & Real-Time Alert Poller...${NC}"
 uv run python -m notifications.bot &
 BOT_PID=$!
+
+uv run python run_pipeline.py --loop --interval 900 >/dev/null 2>&1 &
+POLLER_PID=$!
 
 sleep 3
 

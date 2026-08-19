@@ -34,8 +34,8 @@ def main() -> None:
     parser.add_argument(
         "--interval",
         type=int,
-        default=int(os.getenv("POLL_INTERVAL_SECONDS", "300")),
-        help="Poll interval in seconds (default: 300)",
+        default=int(os.getenv("POLL_INTERVAL_SECONDS", "900")),
+        help="Poll interval in seconds (default: 900)",
     )
     parser.add_argument("--digest", action="store_true", help="Trigger daily digest dispatch")
 

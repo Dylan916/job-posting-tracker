@@ -21,4 +21,6 @@ wheels/
 .vscode/
 .idea/
 .pytest_cache/
-
+# Cache and local runtime files
+.simplify_etag.txt
+*.txt.cache

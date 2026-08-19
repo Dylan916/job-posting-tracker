@@ -67,3 +67,59 @@ def test_telegram_message_chunker_under_4096_chars():
     for chunk in chunks:
         assert len(chunk) <= 4096, f"Chunk exceeded 4,096 characters (was {len(chunk)})"
         assert "Tech Company" in chunk
+
+
+from unittest.mock import AsyncMock, patch
+import pytest
+from telegram.error import TelegramError
+from notifications.dispatcher import dispatch_notifications_async, send_telegram_messages
+
+
+@pytest.mark.asyncio
+async def test_dispatch_notifications_calls_bot_send_message():
+    """Test that dispatch_notifications_async fetches matched users and calls Telegram Bot API."""
+    mock_postings = [
+        {
+            "id": 101,
+            "company": "NVIDIA",
+            "title": "Software Engineering Intern",
+            "terms": "Summer 2027",
+            "location": "Santa Clara, CA",
+            "url": "https://nvidia.com/jobs/101",
+            "source": "simplify_github",
+        }
+    ]
+
+    with (
+        patch("notifications.dispatcher.get_db_connection") as mock_get_db,
+        patch("notifications.dispatcher.TELEGRAM_BOT_TOKEN", "mock_token"),
+        patch("notifications.dispatcher.Bot") as MockBot,
+        patch("notifications.dispatcher.match_postings_for_users") as mock_matcher,
+        patch("notifications.dispatcher.record_notifications_sent") as mock_record,
+    ):
+        mock_matcher.return_value = {123456: mock_postings}
+        mock_bot_instance = AsyncMock()
+        MockBot.return_value = mock_bot_instance
+
+        sent_count = await dispatch_notifications_async(mock_postings, mode="instant")
+
+        assert sent_count == 1
+        assert mock_bot_instance.send_message.called
+        call_kwargs = mock_bot_instance.send_message.call_args.kwargs
+        assert call_kwargs["chat_id"] == 123456
+        assert "NVIDIA" in call_kwargs["text"]
+        assert "Software Engineering Intern" in call_kwargs["text"]
+        assert mock_record.called
+
+
+@pytest.mark.asyncio
+async def test_send_telegram_messages_markdown_fallback():
+    """Test that Telegram delivery falls back to sanitized text if markdown fails."""
+    mock_bot = AsyncMock()
+    # First call with markdown raises TelegramError, second call (fallback) succeeds
+    mock_bot.send_message.side_effect = [TelegramError("Can't parse entities"), None]
+
+    success = await send_telegram_messages(mock_bot, 123456, ["*Test Company* Role [Apply](http://test.com)"])
+
+    assert success is True
+    assert mock_bot.send_message.call_count == 2
