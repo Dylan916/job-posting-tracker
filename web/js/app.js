@@ -273,13 +273,33 @@ async function loadPostings() {
     }
 }
 
+function formatLocationDisplayHtml(rawLocation, isRemote) {
+    if (isRemote && !rawLocation) return 'Remote';
+    if (!rawLocation) return isRemote ? 'Remote' : 'Location not specified';
+
+    let base = rawLocation;
+    if (isRemote && !base.toLowerCase().includes('remote')) {
+        base = `${base} (Remote)`;
+    }
+
+    const parts = base.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length > 4) {
+        const firstTwo = `${parts[0]}, ${parts[1]}`;
+        const moreCount = Math.max(1, Math.floor((parts.length - 2) / 2));
+        return `${escapeHtml(firstTwo)} <span class="location-more-badge" data-tooltip="${escapeHtml(base)}">(+${moreCount} more)</span>`;
+    }
+
+    return escapeHtml(base);
+}
+
 /**
  * Render List of Job Rows (Single-Column)
  */
 function renderJobListings(items) {
     const html = items.map(p => {
         const ageText = formatRelativeTime(p.posted_at || p.first_seen_at);
-        const locationStr = p.is_remote ? (p.location ? `${p.location} (Remote)` : 'Remote') : (p.location || 'Location not specified');
+        const rawLocation = p.location || '';
+        const locationHtml = formatLocationDisplayHtml(rawLocation, p.is_remote);
 
         return `
             <div class="job-row" id="job-row-${p.id}">
@@ -294,7 +314,7 @@ function renderJobListings(items) {
                 <div class="job-meta-right">
                     <div class="job-meta-text">
                         <span class="job-term-str">${escapeHtml(p.terms || 'General')}</span>
-                        <span>${escapeHtml(locationStr)} · ${ageText}</span>
+                        <span class="job-location-str">${locationHtml} · ${ageText}</span>
                     </div>
 
                     <a href="${escapeHtml(p.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-apply-cta" id="apply-btn-${p.id}">
