@@ -82,6 +82,92 @@ def test_extract_from_webpage_schema_org(monkeypatch):
     assert "Artificial Intelligence" in result["title"]
     assert result["location"] == "Palo Alto"
     assert result["terms"] == ["Summer 2027"]
+    assert result["degrees"] == ["Bachelor's"]
     assert result["requisition_id"] == "55123"
     assert result["method"] == "schema_org"
+
+
+def test_extract_from_webpage_masters_graduate_role():
+    """Verify that graduate/masters roles like Faire are detected with Master's degree and location."""
+    from processing.instagram_extractor import extract_from_webpage
+
+    html_content = """
+    <html>
+      <head>
+        <script type="application/ld+json">
+        {
+          "@type": "JobPosting",
+          "title": "Applied AI/ML Scientist, Intern",
+          "hiringOrganization": {"name": "Faire"},
+          "jobLocation": {"address": {"addressLocality": "San Francisco, CA"}},
+          "description": "Qualifications: Must be currently pursuing an MS/Master's or PhD degree in Computer Science."
+        }
+        </script>
+      </head>
+    </html>
+    """
+
+    class MockResponse:
+        status_code = 200
+        text = html_content
+        url = "https://job-boards.greenhouse.io/faire/jobs/612345"
+
+    class MockClient:
+        def get(self, url, **kwargs):
+            return MockResponse()
+
+    result = extract_from_webpage("https://job-boards.greenhouse.io/faire/jobs/612345", client=MockClient())
+    assert result is not None
+    assert result["company"] == "Faire"
+    assert result["title"] == "Applied AI/ML Scientist, Intern"
+    assert result["location"] == "San Francisco, CA"
+    assert "Master's" in result["degrees"]
+    assert "Bachelor's" not in result["degrees"]  # Undergrad filter will properly exclude this!
+
+
+def test_extract_degrees_from_text():
+    from processing.instagram_extractor import extract_degrees_from_text
+
+    # Masters / Graduate role
+    grad_text = "Applied AI/ML Scientist Intern. Currently enrolled in a Master's or MS degree program."
+    degrees = extract_degrees_from_text(grad_text)
+    assert "Master's" in degrees
+    assert "Bachelor's" not in degrees
+
+    # Undergrad role
+    undergrad_text = "Software Engineer Intern. Currently pursuing a Bachelor's degree (BS) in Computer Science."
+    assert extract_degrees_from_text(undergrad_text) == ["Bachelor's"]
+
+
+def test_live_webpage_extraction_dynamic_greenhouse():
+    """
+    Dynamic live integration test:
+    Queries Cloudflare's public board for whichever job is currently active,
+    so this test NEVER goes stale or breaks when a specific requisition closes.
+    """
+    import httpx
+    from processing.instagram_extractor import extract_from_webpage
+
+    try:
+        resp = httpx.get("https://boards-api.greenhouse.io/v1/boards/cloudflare/jobs", timeout=10.0)
+        jobs = resp.json().get("jobs", [])
+    except Exception:
+        pytest.skip("External network unavailable")
+
+    if not jobs:
+        pytest.skip("No active jobs currently on board")
+
+    # Pick the first currently open job on the live board
+    live_url = jobs[0]["absolute_url"]
+    result = extract_from_webpage(live_url)
+
+    assert result is not None
+    assert result["company"] == "Cloudflare"
+    assert result["title"] != ""
+    assert result["requisition_id"] is not None
+    assert "degrees" in result
+    assert isinstance(result["degrees"], list)
+
+
+
 

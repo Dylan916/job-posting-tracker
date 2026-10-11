@@ -28,15 +28,17 @@ def format_posting_item(posting: dict[str, Any]) -> str:
     source = posting.get("source", "aggregator")
 
     remote_badge = " 🌐 *(Remote)*" if is_remote else ""
+    repost_badge = " 🔄 *(Repost)*" if posting.get("is_repost") else ""
     term_line = f"📅 _{terms}_\n" if terms else ""
 
     return (
         f"🏢 *{company}*\n"
-        f"💼 *{title}*{remote_badge}\n"
+        f"💼 *{title}*{remote_badge}{repost_badge}\n"
         f"{term_line}"
         f"📍 _{location}_\n"
         f"🔗 [Apply Here]({url}) | 🏷️ `{source}`\n"
     )
+
 
 
 def format_batch_message(postings: list[dict[str, Any]], title: str = "🚨 *New Matching Job Openings*") -> list[str]:

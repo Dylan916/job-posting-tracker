@@ -27,6 +27,8 @@ CREATE INDEX IF NOT EXISTS idx_postings_active ON postings(is_active);
 CREATE INDEX IF NOT EXISTS idx_postings_company ON postings(company);
 CREATE INDEX IF NOT EXISTS idx_postings_terms ON postings(terms);
 CREATE INDEX IF NOT EXISTS idx_postings_first_seen ON postings(first_seen_at DESC);
+CREATE INDEX IF NOT EXISTS idx_postings_url ON postings(url);
+
 
 -- 2. Users table: Telegram subscribers and preferences
 CREATE TABLE IF NOT EXISTS users (

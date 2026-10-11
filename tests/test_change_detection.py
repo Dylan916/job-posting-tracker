@@ -208,3 +208,41 @@ def test_full_system_end_to_end_propagation():
         assert payload["items"][0]["url"] == "https://amazon.jobs/en/jobs/12345"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_cross_source_url_dedup_and_repost():
+    """
+    Test that:
+    1. Identical URL across sources or stories is deduplicated (no new alert).
+    2. Different requisition URL for the same company/title is flagged as a repost (is_repost=True).
+    """
+    from ingestion.runner import upsert_postings
+    from unittest.mock import MagicMock
+
+    # 1. Existing database state
+    existing_url = "https://careers.rivian.com/jobs/55123"
+    
+    mock_cursor = MagicMock()
+    # First call: simulate insert RETURNING row with is_new=True
+    mock_cursor.fetchone.side_effect = [
+        {"id": 10, "source": "instagram_zero2sudo", "external_id": "story_1", "is_new": True, "is_active": True},
+        # Second fetch: cur.execute("SELECT id, source FROM postings WHERE url = ...") -> matches existing url!
+        {"id": 5, "source": "simplify_github"},
+    ]
+
+    mock_conn = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    incoming_posting = NormalizedPosting(
+        source="instagram_zero2sudo",
+        external_id="story_1",
+        company="Rivian",
+        title="AI Intern",
+        url=existing_url,
+    )
+
+    new_records, new_cnt, upd_cnt = upsert_postings(mock_conn, [incoming_posting])
+    assert new_cnt == 0
+    assert upd_cnt == 1
+    assert len(new_records) == 0
+

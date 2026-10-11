@@ -7,6 +7,7 @@ Includes:
 4. Tier 2: Gemini 2.0 Flash Vision fallback for protected or image-only job stories.
 """
 
+import html
 import json
 import os
 import re
@@ -21,11 +22,6 @@ console = Console()
 
 # Tracking query parameters to strip from destination URLs
 TRACKING_PARAMS = {
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_term",
-    "utm_content",
     "igshid",
     "fbclid",
     "ref",
@@ -34,7 +30,9 @@ TRACKING_PARAMS = {
     "_hsenc",
     "_hsmi",
     "mkt_tok",
+    "e",
 }
+
 
 # Regex to detect terms / seasons
 TERM_PATTERN = re.compile(
@@ -76,11 +74,12 @@ def canonicalize_url(url: str) -> str:
     if parsed.query:
         for param in parsed.query.split("&"):
             key = param.split("=")[0].lower()
-            if key not in TRACKING_PARAMS:
+            if key not in TRACKING_PARAMS and not key.startswith("utm_"):
                 filtered_query_pairs.append(param)
 
     clean_query = "&".join(filtered_query_pairs)
     clean_path = parsed.path.rstrip("/") if parsed.path != "/" else "/"
+
 
     return urlunparse((parsed.scheme, parsed.netloc, clean_path, "", clean_query, ""))
 
@@ -149,6 +148,62 @@ def split_company_and_title(raw_title: str) -> tuple[str, str]:
     return "", cleaned
 
 
+def extract_company_from_url(url: str) -> str | None:
+    """Extract company name from well-known ATS domain structures."""
+    if not url:
+        return None
+    parsed = urlparse(url)
+    netloc = parsed.netloc.lower()
+    path_parts = [p for p in parsed.path.split("/") if p]
+
+    # Greenhouse: boards.greenhouse.io/<company> or job-boards.greenhouse.io/<company>
+    if "greenhouse.io" in netloc and path_parts:
+        return path_parts[0].capitalize()
+
+    # Lever: jobs.lever.co/<company>
+    if "lever.co" in netloc and path_parts:
+        return path_parts[0].capitalize()
+
+    # Ashby: jobs.ashbyhq.com/<company>
+    if "ashbyhq.com" in netloc and path_parts:
+        return path_parts[0].capitalize()
+
+    # Workday: <company>.wd1.myworkdayjobs.com
+    if "myworkdayjobs.com" in netloc:
+        return netloc.split(".")[0].capitalize()
+
+    # Careers subdomains: careers.rivian.com -> Rivian
+    if netloc.startswith("careers."):
+        domain_parts = netloc.split(".")
+        if len(domain_parts) >= 3:
+            return domain_parts[1].capitalize()
+
+    return None
+
+
+
+def extract_degrees_from_text(text: str) -> list[str]:
+    """Extract degree levels mentioned in job requirements/title."""
+    if not text:
+        return ["Bachelor's"]
+    degrees: list[str] = []
+    text_lower = text.lower()
+
+    if re.search(r"\b(phd|doctorat|doctor of philosophy)\b", text_lower):
+        degrees.append("PhD")
+    if re.search(r"\b(master'?s|ms|m\.s\.|mba|graduate student)\b", text_lower):
+        degrees.append("Master's")
+    if re.search(r"\b(bachelor'?s|bs|b\.s\.|ba|undergraduate)\b", text_lower):
+        degrees.append("Bachelor's")
+
+    # If neither was found, default to Bachelor's unless title clearly indicates advanced degree
+    if not degrees:
+        if "intern" in text_lower or "early career" in text_lower:
+            degrees.append("Bachelor's")
+
+    return degrees
+
+
 def extract_from_webpage(url: str, client: httpx.Client | None = None) -> dict[str, Any] | None:
     """
     Tier 1: Fetch job posting HTML and parse Schema.org JSON-LD and OpenGraph tags.
@@ -200,19 +255,26 @@ def extract_from_webpage(url: str, client: httpx.Client | None = None) -> dict[s
                             first_addr = loc[0].get("address", {}) if isinstance(loc[0], dict) else {}
                             location = first_addr.get("addressLocality") or ""
 
-                        terms = extract_terms_from_text(title + " " + str(item.get("description", "")))
+                        description_text = str(item.get("description", ""))
+                        terms = extract_terms_from_text(title + " " + description_text)
+                        degrees = extract_degrees_from_text(title + " " + description_text)
                         is_remote = "remote" in title.lower() or str(item.get("jobLocationType", "")).lower() == "telecommute"
+
+                        company = html.unescape(company)
+                        title = html.unescape(title)
 
                         return {
                             "company": company,
                             "title": title,
                             "location": location or None,
                             "terms": terms,
+                            "degrees": degrees,
                             "is_remote": is_remote,
                             "url": str(response.url),
                             "requisition_id": extract_requisition_id(str(response.url)),
                             "method": "schema_org",
                         }
+
             except Exception:
                 continue
 
@@ -229,18 +291,28 @@ def extract_from_webpage(url: str, client: httpx.Client | None = None) -> dict[s
         if site_name and (not company or len(site_name) < len(company)):
             company = site_name
 
+        if not company or company == "Unknown Company":
+            url_company = extract_company_from_url(str(response.url))
+            if url_company:
+                company = url_company
+
         if title:
-            terms = extract_terms_from_text(title)
+            page_text = soup.get_text()[:4000]
+            terms = extract_terms_from_text(title + " " + page_text)
+            degrees = extract_degrees_from_text(title + " " + page_text)
             return {
                 "company": company or "Unknown Company",
                 "title": title,
                 "location": None,
                 "terms": terms,
+                "degrees": degrees,
                 "is_remote": "remote" in title.lower(),
                 "url": str(response.url),
                 "requisition_id": extract_requisition_id(str(response.url)),
                 "method": "opengraph",
             }
+
+
 
     except Exception as exc:
         console.print(f"[dim yellow]Direct webpage parsing failed for {clean_url}: {exc}[/]")
@@ -265,26 +337,32 @@ def extract_with_gemini_vision(
         from google import genai
         from google.genai import types
 
-        # Download image bytes if given a URL
-        if isinstance(image_url_or_bytes, str):
-            resp = httpx.get(image_url_or_bytes, timeout=15.0)
+        # Download image bytes if given a URL (string, HttpUrl, etc.)
+        if isinstance(image_url_or_bytes, (bytes, bytearray)):
+            image_bytes = bytes(image_url_or_bytes)
+        else:
+            url_str = str(image_url_or_bytes).strip()
+            if not url_str or not url_str.startswith("http"):
+                console.print(f"[dim yellow]Invalid image URL: {url_str}[/]")
+                return None
+            resp = httpx.get(url_str, timeout=15.0)
             resp.raise_for_status()
             image_bytes = resp.content
-        else:
-            image_bytes = image_url_or_bytes
 
         client = genai.Client(api_key=key)
+
 
         prompt = (
             "Analyze this Instagram story screenshot. Determine if it is a job/internship posting. "
             "If yes, extract the company, job title, terms/season (e.g. Summer 2027), locations, "
-            "and whether it is remote. "
+            "whether it is remote, and target degree levels (e.g. ['Bachelor's'], ['Master's'], ['PhD']). "
             "Respond ONLY with valid JSON in this format: "
             '{"is_job_posting": true, "company": "...", "title": "...", "location": "...", '
-            '"terms": ["Summer 2027"], "is_remote": false}. '
+            '"terms": ["Summer 2027"], "degrees": ["Bachelor\'s"], "is_remote": false}. '
             'If it is career advice, an interview tip, or NOT a specific job opening, '
             'respond with {"is_job_posting": false}.'
         )
+
 
         model_name = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
         try:

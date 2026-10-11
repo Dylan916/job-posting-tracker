@@ -9,6 +9,7 @@ from rich.table import Table
 from db.connection import get_db_connection
 from ingestion.base import SourcePoller
 from ingestion.greenhouse import GreenhousePoller
+from ingestion.instagram import InstagramStoryPoller
 from ingestion.models import NormalizedPosting, IngestionStats
 from ingestion.simplify import SimplifyPoller
 
@@ -19,7 +20,9 @@ DEFAULT_POLLERS: list[SourcePoller] = [
     GreenhousePoller(company_token="cloudflare", display_name="Cloudflare"),
     GreenhousePoller(company_token="datadog", display_name="Datadog"),
     GreenhousePoller(company_token="stripe", display_name="Stripe"),
+    InstagramStoryPoller(),
 ]
+
 
 
 def upsert_postings(
@@ -74,13 +77,38 @@ def upsert_postings(
             row = cur.fetchone()
             if row:
                 if row["is_new"] and row["is_active"]:
+                    # Cross-source URL deduplication: check if exact URL already existed
+                    if p.url:
+                        cur.execute(
+                            "SELECT id, source FROM postings WHERE url = %s AND id != %s LIMIT 1;",
+                            (p.url, row["id"]),
+                        )
+                        existing_url = cur.fetchone()
+                        if existing_url:
+                            # Already known from another source or earlier story
+                            console.print(
+                                f"[dim]Posting '{p.title}' at {p.company} already exists from source '{existing_url['source']}'. Skipping new alert.[/]"
+                            )
+                            updated_count += 1
+                            continue
+
+                    # Repost detection: same company and title, but new requisition / URL
+                    cur.execute(
+                        "SELECT id FROM postings WHERE LOWER(company) = LOWER(%s) AND LOWER(title) = LOWER(%s) AND id != %s LIMIT 1;",
+                        (p.company, p.title, row["id"]),
+                    )
+                    is_repost = cur.fetchone() is not None
+                    row_dict = dict(row)
+                    row_dict["is_repost"] = is_repost
+
                     new_count += 1
-                    new_records.append(row)
+                    new_records.append(row_dict)
                 else:
                     updated_count += 1
 
     conn.commit()
     return new_records, new_count, updated_count
+
 
 
 def run_all_pollers(
