@@ -18,6 +18,8 @@ from bs4 import BeautifulSoup
 import httpx
 from rich.console import Console
 
+from processing.location_cleaner import normalize_location
+
 console = Console()
 
 # Tracking query parameters to strip from destination URLs
@@ -246,14 +248,32 @@ def extract_from_webpage(url: str, client: httpx.Client | None = None) -> dict[s
                         company = (org.get("name") if isinstance(org, dict) else str(org or "")).strip()
 
                         loc = item.get("jobLocation")
-                        location = ""
+                        raw_loc_parts: list[str] = []
                         if isinstance(loc, dict):
                             addr = loc.get("address", {})
                             if isinstance(addr, dict):
-                                location = addr.get("addressLocality") or addr.get("addressRegion") or ""
-                        elif isinstance(loc, list) and loc:
-                            first_addr = loc[0].get("address", {}) if isinstance(loc[0], dict) else {}
-                            location = first_addr.get("addressLocality") or ""
+                                city = addr.get("addressLocality")
+                                state = addr.get("addressRegion")
+                                country = addr.get("addressCountry")
+                                country_name = country.get("name") if isinstance(country, dict) else str(country or "")
+                                for p in (city, state, country_name):
+                                    if p and str(p).strip():
+                                        raw_loc_parts.append(str(p).strip())
+                            elif isinstance(addr, str) and addr.strip():
+                                raw_loc_parts.append(addr.strip())
+                        elif isinstance(loc, list):
+                            for l in loc:
+                                if isinstance(l, dict):
+                                    addr = l.get("address", {})
+                                    if isinstance(addr, dict):
+                                        c = addr.get("addressLocality")
+                                        s = addr.get("addressRegion")
+                                        if c and s:
+                                            raw_loc_parts.append(f"{c}, {s}")
+                                        elif c:
+                                            raw_loc_parts.append(str(c))
+                        
+                        location = normalize_location(", ".join(raw_loc_parts)) if raw_loc_parts else None
 
                         description_text = str(item.get("description", ""))
                         terms = extract_terms_from_text(title + " " + description_text)
@@ -356,6 +376,9 @@ def extract_with_gemini_vision(
             "Analyze this Instagram story screenshot. Determine if it is a job/internship posting. "
             "If yes, extract the company, job title, terms/season (e.g. Summer 2027), locations, "
             "whether it is remote, and target degree levels (e.g. ['Bachelor's'], ['Master's'], ['PhD']). "
+            "Format locations consistently: 'City, ST' for US (e.g. 'Palo Alto, CA', 'New York, NY'), "
+            "'City, Province, Canada' for Canada (e.g. 'Toronto, ON, Canada'), or 'Remote' / 'City, Country' (e.g. 'London, UK'). "
+            "Never return bare city names without state/province code. "
             "Respond ONLY with valid JSON in this format: "
             '{"is_job_posting": true, "company": "...", "title": "...", "location": "...", '
             '"terms": ["Summer 2027"], "degrees": ["Bachelor\'s"], "is_remote": false}. '
@@ -391,12 +414,11 @@ def extract_with_gemini_vision(
                 ),
             )
 
-
-
         if response.text:
             data = json.loads(response.text)
             if data.get("is_job_posting"):
                 data["method"] = "gemini_vision"
+                data["location"] = normalize_location(data.get("location"))
                 return data
 
     except Exception as exc:
@@ -420,6 +442,7 @@ def extract_job_posting_details(
     # 1. Try Tier 1: Webpage scraping
     details = extract_from_webpage(clean_url)
     if details and details.get("company") and details.get("title") and details["company"] != "Unknown Company":
+        details["location"] = normalize_location(details.get("location"))
         return details
 
     # 2. Try Tier 2: Gemini Vision fallback
@@ -429,6 +452,7 @@ def extract_job_posting_details(
         if vision_result:
             vision_result["url"] = clean_url
             vision_result["requisition_id"] = extract_requisition_id(clean_url)
+            vision_result["location"] = normalize_location(vision_result.get("location"))
             return vision_result
 
     # If both tiers failed, return minimal placeholder with canonical URL

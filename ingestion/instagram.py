@@ -20,6 +20,7 @@ from processing.instagram_extractor import (
     extract_job_posting_details,
     extract_requisition_id,
 )
+from processing.location_cleaner import normalize_location
 
 console = Console()
 
@@ -205,7 +206,7 @@ class InstagramStoryPoller(SourcePoller):
             external_id=raw["story_id"],
             company=company,
             title=title,
-            location=details.get("location"),
+            location=normalize_location(details.get("location")),
             terms=details.get("terms", []),
             is_remote=details.get("is_remote", False),
             is_active=True,

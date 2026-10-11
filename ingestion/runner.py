@@ -12,6 +12,7 @@ from ingestion.greenhouse import GreenhousePoller
 from ingestion.instagram import InstagramStoryPoller
 from ingestion.models import NormalizedPosting, IngestionStats
 from ingestion.simplify import SimplifyPoller
+from processing.location_cleaner import normalize_location
 
 console = Console()
 
@@ -60,12 +61,14 @@ def upsert_postings(
 
     with conn.cursor() as cur:
         for p in postings:
+            norm_loc = normalize_location(p.location)
+            p.location = norm_loc
             params = {
                 "source": p.source,
                 "external_id": p.external_id,
                 "company": p.company,
                 "title": p.title,
-                "location": p.location,
+                "location": norm_loc,
                 "terms": p.terms_display,
                 "is_remote": p.is_remote,
                 "is_active": p.is_active,

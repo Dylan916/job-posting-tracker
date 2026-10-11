@@ -80,7 +80,7 @@ def test_extract_from_webpage_schema_org(monkeypatch):
     assert result is not None
     assert result["company"] == "Rivian"
     assert "Artificial Intelligence" in result["title"]
-    assert result["location"] == "Palo Alto"
+    assert result["location"] == "Palo Alto, CA"
     assert result["terms"] == ["Summer 2027"]
     assert result["degrees"] == ["Bachelor's"]
     assert result["requisition_id"] == "55123"
