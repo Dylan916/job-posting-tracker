@@ -24,3 +24,6 @@ wheels/
 # Cache and local runtime files
 .simplify_etag.txt
 *.txt.cache
+data/
+*session*.json
+
